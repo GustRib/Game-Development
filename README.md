@@ -40,4 +40,4 @@ Diferenciais Técnicos:
 •	Sistema visual de dano (flutuante)
 •	HUD com nome do personagem
 
-
+* Data de início: 29-04-25
