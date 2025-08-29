@@ -62,7 +62,7 @@ public class Player {
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !isAttacking) {
             isAttacking = true;
             stateTime = 0f;
-            currentAnimation = animations.get("attack"); // troca para animação de ataque
+            currentAnimation = animations.get("attack");
         }
 
         if (isAttacking) {
@@ -107,7 +107,7 @@ public class Player {
 
     private void updateAnimation(float delta) {
         if (currentAnimation != previousAnimation) {
-            stateTime = 0f; // reseta tempo ao trocar de animação
+            stateTime = 0f;
             previousAnimation = currentAnimation;
         }
         stateTime += delta; // sempre acumula

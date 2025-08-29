@@ -118,8 +118,6 @@ public class GameScreen extends AbstractScreen {
             obj.update(delta);
         }
 
-
-        // Desenho principal do player e objetos
         batch.begin();
         player.render(batch);
         for (AnimatedObject obj : animatedObjects) {

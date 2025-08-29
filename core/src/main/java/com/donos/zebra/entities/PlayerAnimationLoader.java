@@ -17,9 +17,9 @@ public class PlayerAnimationLoader {
         animations = new HashMap<>();
         sheets = new HashMap<>();
 
-        animations.put("idle", loadDirectional("characters/Player1/Swordsman_lvl1_Idle_with_shadow.png", 10, 4, 0.18f, Animation.PlayMode.LOOP));
-        animations.put("walk", loadDirectional("characters/Player1/Swordsman_lvl1_Walk_with_shadow.png", 8, 4, 0.10f, Animation.PlayMode.LOOP));
-        animations.put("attack", loadDirectional("characters/Player1/Swordsman_lvl1_Attack_with_shadow.png", 6, 4, 0.07f, Animation.PlayMode.NORMAL));
+        animations.put("idle", loadDirectional("characters/Player1/Swordsman_lvl1_Idle_with_shadow.png", 12, 4, 0.18f, Animation.PlayMode.LOOP));
+        animations.put("walk", loadDirectional("characters/Player1/Swordsman_lvl1_Walk_with_shadow.png", 6, 4, 0.10f, Animation.PlayMode.LOOP));
+        animations.put("attack", loadDirectional("characters/Player1/Swordsman_lvl1_Attack_with_shadow.png", 8, 4, 0.07f, Animation.PlayMode.NORMAL));
 
         return animations;
     }
