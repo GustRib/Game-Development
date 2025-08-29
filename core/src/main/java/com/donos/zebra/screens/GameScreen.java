@@ -11,6 +11,7 @@ import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -33,7 +34,6 @@ public class GameScreen extends AbstractScreen {
 
     private static final float UNIT_SCALE = 1f;
 
-    // debug renderer (opcional)
     private ShapeRenderer shapeRenderer;
 
     public GameScreen(MainGame game) {
@@ -47,15 +47,12 @@ public class GameScreen extends AbstractScreen {
         mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
         player = new Player();
 
+        // --- Spawn do player ---
         MapLayer spawnLayer = map.getLayers().get("spawn");
-        if (spawnLayer == null) {
-            Gdx.app.error("SPAWN", "Camada 'spawn' não encontrada!");
-        } else {
+        if (spawnLayer != null) {
             MapObjects spawnObjects = spawnLayer.getObjects();
             MapObject spawn = spawnObjects.get("playerSpawn");
-            if (spawn == null && spawnObjects.getCount() > 0) {
-                spawn = spawnObjects.get(0);
-            }
+            if (spawn == null && spawnObjects.getCount() > 0) spawn = spawnObjects.get(0);
 
             if (spawn != null) {
                 float sx = 0f, sy = 0f;
@@ -75,8 +72,11 @@ public class GameScreen extends AbstractScreen {
             } else {
                 Gdx.app.error("SPAWN", "Nenhum objeto encontrado na layer spawn.");
             }
+        } else {
+            Gdx.app.error("SPAWN", "Camada 'spawn' não encontrada!");
         }
 
+        // --- Colisões ---
         collisionRects = new Array<>();
         MapLayer collisionLayer = map.getLayers().get("colisao");
         if (collisionLayer != null) {
@@ -91,22 +91,34 @@ public class GameScreen extends AbstractScreen {
             Gdx.app.log("COLLISION", "Layer 'colisao' não encontrada.");
         }
 
+        // --- Camera ---
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         animatedObjects = new Array<>();
 
-        // --- ShapeRenderer para debug ---
         shapeRenderer = new ShapeRenderer();
     }
-
 
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        player.update(delta, collisionRects);
+        // Converte os retângulos do mapa em polígonos
+        Array<Polygon> collisionPolygons = new Array<>();
+        for (Rectangle r : collisionRects) {
+            float[] vertices = {
+                r.x, r.y,
+                r.x + r.width, r.y,
+                r.x + r.width, r.y + r.height,
+                r.x, r.y + r.height
+            };
+            Polygon poly = new Polygon(vertices);
+            collisionPolygons.add(poly);
+        }
+
+        player.update(delta, collisionPolygons);
 
         camera.position.set(player.getX(), player.getY(), 0);
         camera.update();
@@ -114,33 +126,37 @@ public class GameScreen extends AbstractScreen {
         mapRenderer.setView(camera);
         mapRenderer.render();
 
-        for (AnimatedObject obj : animatedObjects) {
-            obj.update(delta);
-        }
+        for (AnimatedObject obj : animatedObjects) obj.update(delta);
 
         batch.begin();
         player.render(batch);
-        for (AnimatedObject obj : animatedObjects) {
-            obj.render(batch);
-        }
+        for (AnimatedObject obj : animatedObjects) obj.render(batch);
         batch.end();
 
-        // --- DEBUG: desenha retângulos de colisão ---
+        // --- DEBUG: colisões ---
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
 
-        shapeRenderer.setColor(1, 0, 0, 1); // vermelho
+        // Retângulos de colisão
+        shapeRenderer.setColor(1, 0, 0, 1);
         for (Rectangle r : collisionRects) {
             shapeRenderer.rect(r.x, r.y, r.width, r.height);
         }
 
-        shapeRenderer.setColor(0, 1, 0, 1); // verde
-        Rectangle p = player.getBounds();
-        shapeRenderer.rect(p.x, p.y, p.width, p.height);
+        // Polígono do player
+        shapeRenderer.setColor(0, 1, 0, 1);
+        Polygon p = player.getHitbox();
+        float[] vertices = p.getTransformedVertices();
+        for (int i = 0; i < vertices.length; i += 2) {
+            float x1 = vertices[i];
+            float y1 = vertices[i + 1];
+            float x2 = vertices[(i + 2) % vertices.length];
+            float y2 = vertices[(i + 3) % vertices.length];
+            shapeRenderer.line(x1, y1, x2, y2);
+        }
 
         shapeRenderer.end();
     }
-
 
     @Override
     public void dispose() {
