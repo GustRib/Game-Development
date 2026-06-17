@@ -6,6 +6,7 @@ dependencies {
   implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 
   testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
+  testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 
   // Junit 5
   testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'

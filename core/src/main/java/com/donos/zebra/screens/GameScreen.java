@@ -9,12 +9,17 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.MainGame;
+import com.donos.zebra.config.DungeonGenerationConfig;
+import com.donos.zebra.config.GameConfig;
 import com.donos.zebra.entities.Entity;
 import com.donos.zebra.entities.Player;
 import com.donos.zebra.world.CameraController;
+import com.donos.zebra.world.DungeonMapAdapter;
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.world.LevelData;
 import com.donos.zebra.world.LevelLoader;
+import com.donos.zebra.world.dungeon.DungeonGenerator;
+import com.donos.zebra.world.dungeon.DungeonMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +34,7 @@ public class GameScreen extends AbstractScreen {
     private final List<Entity> entities = new ArrayList<>();
 
     private TiledMap map;
+    private boolean proceduralMap;
     private OrthogonalTiledMapRenderer mapRenderer;
     private CameraController cameraController;
     private Array<Rectangle> collisionRects;
@@ -43,7 +49,8 @@ public class GameScreen extends AbstractScreen {
 
     @Override
     public void show() {
-        LevelData levelData = LevelLoader.load(game.getAssetManager(), LevelConstants.MAP_PATH);
+        LevelData levelData = loadLevelData();
+        proceduralMap = GameConfig.USE_PROCEDURAL_DUNGEON;
         map = levelData.map;
         collisionRects = levelData.collisionRects;
         collisionPolygons = levelData.collisionPolygons;
@@ -120,6 +127,17 @@ public class GameScreen extends AbstractScreen {
         entities.clear();
 
         if (mapRenderer != null) mapRenderer.dispose();
+        if (proceduralMap) {
+            DungeonMapAdapter.disposeProceduralResources(map);
+        }
         if (shapeRenderer != null) shapeRenderer.dispose();
+    }
+
+    private LevelData loadLevelData() {
+        if (GameConfig.USE_PROCEDURAL_DUNGEON) {
+            DungeonMap dungeonMap = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
+            return DungeonMapAdapter.toLevelData(dungeonMap);
+        }
+        return LevelLoader.load(game.getAssetManager(), LevelConstants.MAP_PATH);
     }
 }

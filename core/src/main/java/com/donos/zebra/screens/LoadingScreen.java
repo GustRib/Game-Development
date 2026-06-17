@@ -3,6 +3,8 @@ package com.donos.zebra.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.donos.zebra.MainGame;
+import com.donos.zebra.config.GameConfig;
+import com.donos.zebra.entities.PlayerAnimationLoader;
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.world.LevelLoader;
 
@@ -22,7 +24,11 @@ public class LoadingScreen extends AbstractScreen {
     @Override
     public void show() {
         if (!assetsQueued) {
-            LevelLoader.queueAssets(game.getAssetManager(), LevelConstants.MAP_PATH);
+            if (GameConfig.USE_PROCEDURAL_DUNGEON) {
+                PlayerAnimationLoader.queueAssets(game.getAssetManager());
+            } else {
+                LevelLoader.queueAssets(game.getAssetManager(), LevelConstants.MAP_PATH);
+            }
             assetsQueued = true;
         }
     }
