@@ -1,10 +1,9 @@
 package com.donos.zebra.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.donos.zebra.MainGame;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.donos.zebra.config.GameConfig;
 
 
 public class MainMenuScreen extends AbstractScreen {
@@ -19,22 +18,17 @@ public class MainMenuScreen extends AbstractScreen {
 
     @Override
     public void show() {
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Fonts/DungeonFont.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 48;
-        font = generator.generateFont(parameter);
-        generator.dispose();
+        font = new BitmapFont();
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.2f, 0.2f, 0.3f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        clearScreen(0.2f, 0.2f, 0.3f, 1);
 
-        batch.begin();
-        font.draw(batch, "Riders of Hive", 200, 400);
+        beginBatch();
+        font.draw(batch, GameConfig.APP_TITLE, 200, 400);
         font.draw(batch, "Press ENTER to Start", 200, 300);
-        batch.end();
+        endBatch();
 
         if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ENTER)) {
             game.setScreen(new LoadingScreen(game));
@@ -43,7 +37,10 @@ public class MainMenuScreen extends AbstractScreen {
 
     @Override
     public void dispose() {
-        font.dispose();
+        if (font != null) {
+            font.dispose();
+            font = null;
+        }
+        super.dispose();
     }
 }
-

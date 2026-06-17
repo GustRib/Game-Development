@@ -1,126 +1,166 @@
 package com.donos.zebra.entities;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import com.donos.zebra.world.LevelConstants;
 
 import java.util.Map;
 
-public class Player {
+public class Player implements Entity {
 
-    private static final float SPEED = 60f;
+    static final float HITBOX_HALF_WIDTH = 6f;
+    static final float HITBOX_HALF_HEIGHT = 10f;
 
+    private final PlayerInput input;
     private Map<String, Animation<TextureRegion>[]> animations;
     private Animation<TextureRegion>[] currentAnimation;
     private Animation<TextureRegion>[] previousAnimation;
+    private String currentAnimationKey = AnimationConstants.ANIM_IDLE;
 
     private float x, y;
     private float stateTime;
     private float scale = 1f;
 
+    private float offsetX = 0f;
+    private float offsetY = 0f;
+
     private boolean isAttacking = false;
-    private int lastDirection = 0;
-    // 0=baixo - 1=esquerda - 2=direita - 3=cima
+    private Direction lastDirection = Direction.DOWN;
 
     private Polygon hitbox;
+    private final Polygon scratchX = new Polygon();
+    private final Polygon scratchY = new Polygon();
 
     public Player() {
-        animations = PlayerAnimationLoader.loadAnimations();
-        currentAnimation = animations.get("idle");
+        this(new PlayerInput());
+    }
+
+    public Player(AssetManager assetManager) {
+        this(new PlayerInput(), assetManager);
+    }
+
+    Player(PlayerInput input) {
+        this(input, PlayerAnimationLoader.loadAnimations());
+    }
+
+    Player(PlayerInput input, Map<String, Animation<TextureRegion>[]> animations) {
+        this.input = input;
+        this.animations = animations;
+        initState();
+    }
+
+    Player(PlayerInput input, AssetManager assetManager) {
+        this.input = input;
+        animations = PlayerAnimationLoader.loadAnimations(assetManager);
+        initState();
+    }
+
+    private void initState() {
+        currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
         previousAnimation = currentAnimation;
         stateTime = 0f;
 
-        x = 100f;
-        y = 100f;
+        x = LevelConstants.DEFAULT_SPAWN_X;
+        y = LevelConstants.DEFAULT_SPAWN_Y;
 
         float[] vertices = {
-            -6, -10,  // canto inferior esquerdo
-            6, -10,   // canto inferior direito
-            6, 10,    // canto superior direito
-            -6, 10    // canto superior esquerdo
+            -HITBOX_HALF_WIDTH, -HITBOX_HALF_HEIGHT,
+            HITBOX_HALF_WIDTH, -HITBOX_HALF_HEIGHT,
+            HITBOX_HALF_WIDTH, HITBOX_HALF_HEIGHT,
+            -HITBOX_HALF_WIDTH, HITBOX_HALF_HEIGHT
         };
         hitbox = new Polygon(vertices);
         hitbox.setPosition(x, y);
     }
 
-    public void update(float delta, Array<Polygon> collisionPolygons) {
+    void setAnimations(Map<String, Animation<TextureRegion>[]> animations) {
+        this.animations = animations;
+        currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
+        previousAnimation = currentAnimation;
+        currentAnimationKey = AnimationConstants.ANIM_IDLE;
+    }
 
+    @Override
+    public void update(float delta) {
+        // Collision-aware update is invoked via update(delta, collisionPolygons).
+    }
+
+    public void update(float delta, Array<Polygon> collisionPolygons) {
         boolean moving = false;
-        float dx = 0f, dy = 0f;
-        int currentDirection = lastDirection;
+        Direction currentDirection = lastDirection;
 
         if (!isAttacking) {
-            if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-                dx -= SPEED * delta;
-                moving = true;
-                currentDirection = 1;
-            }
-            if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-                dx += SPEED * delta;
-                moving = true;
-                currentDirection = 2;
-            }
-            if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-                dy += SPEED * delta;
-                moving = true;
-                currentDirection = 3;
-            }
-            if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-                dy -= SPEED * delta;
-                moving = true;
-                currentDirection = 0;
-            }
-        }
+            Vector2 velocity = input.getIntendedVelocity(delta);
+            move(velocity.x, velocity.y, collisionPolygons);
+            moving = input.isMoving();
+            currentDirection = input.getIntendedDirection();
 
-        move(dx, dy, collisionPolygons);
-
-        if (moving) lastDirection = currentDirection;
-
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !isAttacking) {
-            isAttacking = true;
-            stateTime = 0f;
-            currentAnimation = animations.get("attack");
-        }
-
-        if (isAttacking) {
-            if (currentAnimation[lastDirection].isAnimationFinished(stateTime)) {
-                isAttacking = false;
+            if (input.isAttacking()) {
+                isAttacking = true;
                 stateTime = 0f;
-                currentAnimation = animations.get("idle");
+                setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
             }
-        } else if (moving) {
-            currentAnimation = animations.get("walk");
-        } else {
-            currentAnimation = animations.get("idle");
         }
 
+        if (moving) {
+            lastDirection = currentDirection;
+        }
+
+        updateAnimationState(moving);
         updateAnimation(delta);
     }
 
-    private void move(float dx, float dy, Array<Polygon> collisionPolygons) {
+    private void updateAnimationState(boolean moving) {
+        if (isAttacking) {
+            setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
+            if (currentAnimation[lastDirection.ordinal()].isAnimationFinished(stateTime)) {
+                isAttacking = false;
+                stateTime = 0f;
+                setCurrentAnimation(AnimationConstants.ANIM_IDLE);
+            }
+        } else if (moving) {
+            setCurrentAnimation(AnimationConstants.ANIM_WALK);
+        } else {
+            setCurrentAnimation(AnimationConstants.ANIM_IDLE);
+        }
+    }
+
+    private void setCurrentAnimation(String key) {
+        currentAnimationKey = key;
+        currentAnimation = animations.get(key);
+    }
+
+    void move(float dx, float dy, Array<Polygon> collisionPolygons) {
         if ((dx == 0f && dy == 0f) || collisionPolygons == null) return;
 
         if (dx != 0f) {
-            Polygon nextX = new Polygon(hitbox.getVertices());
-            nextX.setPosition(x + dx, y);
+            scratchX.setVertices(hitbox.getVertices());
+            scratchX.setPosition(x + dx, y);
             boolean collX = false;
             for (Polygon p : collisionPolygons) {
-                if (Intersector.overlapConvexPolygons(nextX, p)) { collX = true; break; }
+                if (Intersector.overlapConvexPolygons(scratchX, p)) {
+                    collX = true;
+                    break;
+                }
             }
             if (!collX) x += dx;
         }
 
         if (dy != 0f) {
-            Polygon nextY = new Polygon(hitbox.getVertices());
-            nextY.setPosition(x, y + dy);
+            scratchY.setVertices(hitbox.getVertices());
+            scratchY.setPosition(x, y + dy);
             boolean collY = false;
             for (Polygon p : collisionPolygons) {
-                if (Intersector.overlapConvexPolygons(nextY, p)) { collY = true; break; }
+                if (Intersector.overlapConvexPolygons(scratchY, p)) {
+                    collY = true;
+                    break;
+                }
             }
             if (!collY) y += dy;
         }
@@ -136,17 +176,19 @@ public class Player {
         stateTime += delta;
     }
 
+    @Override
     public void render(SpriteBatch batch) {
-        TextureRegion currentFrame = currentAnimation[lastDirection].getKeyFrame(stateTime);
-
-        float centerX = hitbox.getX();
-        float centerY = hitbox.getY();
+        TextureRegion currentFrame = currentAnimation[lastDirection.ordinal()].getKeyFrame(stateTime);
 
         batch.draw(currentFrame,
-            centerX - (currentFrame.getRegionWidth() * scale) / 2f,
-            centerY - (currentFrame.getRegionHeight() * scale) / 2f,
+            x + offsetX - (currentFrame.getRegionWidth() * scale) / 2f,
+            y + offsetY - (currentFrame.getRegionHeight() * scale) / 2f,
             currentFrame.getRegionWidth() * scale,
             currentFrame.getRegionHeight() * scale);
+    }
+
+    @Override
+    public void dispose() {
     }
 
     public void setPosition(float x, float y) {
@@ -155,7 +197,24 @@ public class Player {
         hitbox.setPosition(x, y);
     }
 
-    public Polygon getHitbox() { return hitbox; }
-    public float getX() { return x; }
-    public float getY() { return y; }
+    public Polygon getHitbox() {
+        return hitbox;
+    }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public String getCurrentAnimationKey() {
+        return currentAnimationKey;
+    }
+
+    public void setOffsets(float offsetX, float offsetY) {
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+    }
 }

@@ -5,6 +5,8 @@ dependencies {
   implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 
+  testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
+
   // Junit 5
   testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
@@ -13,6 +15,11 @@ dependencies {
   testImplementation 'org.mockito:mockito-core:5.10.0'
 }
 
+sourceSets {
+  test {
+    resources.srcDir("${project.rootDir}/assets")
+  }
+}
 
 test {
   useJUnitPlatform()

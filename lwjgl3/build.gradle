@@ -10,13 +10,12 @@ buildscript {
     }
   }
 }
+import io.github.fourlastor.construo.Target
+
 plugins {
   id "application"
 }
 apply plugin: 'io.github.fourlastor.construo'
-
-
-import io.github.fourlastor.construo.Target
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 mainClassName = 'com.donos.zebra.lwjgl3.Lwjgl3Launcher'

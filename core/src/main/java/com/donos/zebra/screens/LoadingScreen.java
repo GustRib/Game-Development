@@ -1,40 +1,57 @@
 package com.donos.zebra.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.donos.zebra.MainGame;
+import com.donos.zebra.world.LevelConstants;
+import com.donos.zebra.world.LevelLoader;
 
 public class LoadingScreen extends AbstractScreen {
 
     private final MainGame game;
-    private float timer = 0;
+    private boolean assetsQueued = false;
+    private boolean transitionStarted = false;
     private BitmapFont font;
 
     public LoadingScreen(MainGame game) {
         super(game.batch);
         this.game = game;
-        this.font = new BitmapFont(); // fonte padrão do libGDX
+        this.font = new BitmapFont();
     }
 
     @Override
     public void show() {
-
+        if (!assetsQueued) {
+            LevelLoader.queueAssets(game.getAssetManager(), LevelConstants.MAP_PATH);
+            assetsQueued = true;
+        }
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        clearScreen(0, 0, 0, 1);
 
-        batch.begin();
+        beginBatch();
         font.draw(batch, "Loading...", Gdx.graphics.getWidth() / 2f - 40, Gdx.graphics.getHeight() / 2f);
-        batch.end();
+        endBatch();
 
-        timer += delta;
-        if (timer > 2) {
+        if (!game.getAssetManager().isFinished()) {
+            game.getAssetManager().update();
+            return;
+        }
+
+        if (!transitionStarted) {
+            transitionStarted = true;
             game.setScreen(new GameScreen(game));
         }
+    }
+
+    @Override
+    public void dispose() {
+        if (font != null) {
+            font.dispose();
+            font = null;
+        }
+        super.dispose();
     }
 }

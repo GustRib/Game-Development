@@ -1,9 +1,10 @@
 package com.donos.zebra.entities;
 
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.donos.zebra.util.SpriteSheetLoader;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,24 +12,71 @@ import java.util.Map;
 public class PlayerAnimationLoader {
 
     private static Map<String, Animation<TextureRegion>[]> animations;
-    private static Map<String, Texture> sheets; // para dar dispose depois
+    private static Map<String, Texture> sheets;
 
     public static Map<String, Animation<TextureRegion>[]> loadAnimations() {
+        if (animations != null) {
+            return animations;
+        }
+
         animations = new HashMap<>();
         sheets = new HashMap<>();
 
-        animations.put("idle", loadDirectional("characters/Player1/Swordsman_lvl1_Idle_with_shadow.png", 12, 4, 0.18f, Animation.PlayMode.LOOP));
-        animations.put("walk", loadDirectional("characters/Player1/Swordsman_lvl1_Walk_with_shadow.png", 6, 4, 0.10f, Animation.PlayMode.LOOP));
-        animations.put("attack", loadDirectional("characters/Player1/Swordsman_lvl1_Attack_with_shadow.png", 8, 4, 0.07f, Animation.PlayMode.NORMAL));
+        animations.put(AnimationConstants.ANIM_IDLE,
+            loadDirectional(AnimationConstants.IDLE_SHEET_PATH, AnimationConstants.IDLE_COLS,
+                AnimationConstants.DIRECTION_ROWS, AnimationConstants.IDLE_FRAME_DURATION, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_WALK,
+            loadDirectional(AnimationConstants.WALK_SHEET_PATH, AnimationConstants.WALK_COLS,
+                AnimationConstants.DIRECTION_ROWS, AnimationConstants.WALK_FRAME_DURATION, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_ATTACK,
+            loadDirectional(AnimationConstants.ATTACK_SHEET_PATH, AnimationConstants.ATTACK_COLS,
+                AnimationConstants.DIRECTION_ROWS, AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
 
         return animations;
     }
 
-    private static Animation<TextureRegion>[] loadDirectional(String path, int cols, int rows, float frameDuration, Animation.PlayMode mode) {
-        Texture sheet = new Texture(Gdx.files.internal(path));
-        sheets.put(path, sheet);
+    public static void queueAssets(AssetManager assetManager) {
+        assetManager.load(AnimationConstants.IDLE_SHEET_PATH, Texture.class);
+        assetManager.load(AnimationConstants.WALK_SHEET_PATH, Texture.class);
+        assetManager.load(AnimationConstants.ATTACK_SHEET_PATH, Texture.class);
+    }
 
-        TextureRegion[][] tmp = TextureRegion.split(sheet, sheet.getWidth() / cols, sheet.getHeight() / rows);
+    public static Map<String, Animation<TextureRegion>[]> loadAnimations(AssetManager assetManager) {
+        if (animations != null) {
+            return animations;
+        }
+
+        animations = new HashMap<>();
+
+        animations.put(AnimationConstants.ANIM_IDLE,
+            loadDirectional(assetManager, AnimationConstants.IDLE_SHEET_PATH, AnimationConstants.IDLE_COLS,
+                AnimationConstants.DIRECTION_ROWS, AnimationConstants.IDLE_FRAME_DURATION, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_WALK,
+            loadDirectional(assetManager, AnimationConstants.WALK_SHEET_PATH, AnimationConstants.WALK_COLS,
+                AnimationConstants.DIRECTION_ROWS, AnimationConstants.WALK_FRAME_DURATION, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_ATTACK,
+            loadDirectional(assetManager, AnimationConstants.ATTACK_SHEET_PATH, AnimationConstants.ATTACK_COLS,
+                AnimationConstants.DIRECTION_ROWS, AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
+
+        return animations;
+    }
+
+    private static Animation<TextureRegion>[] loadDirectional(String path, int cols, int rows,
+                                                              float frameDuration, Animation.PlayMode mode) {
+        Texture sheet = new Texture(com.badlogic.gdx.Gdx.files.internal(path));
+        sheets.put(path, sheet);
+        return buildDirectionalAnimations(sheet, cols, rows, frameDuration, mode);
+    }
+
+    private static Animation<TextureRegion>[] loadDirectional(AssetManager assetManager, String path, int cols, int rows,
+                                                              float frameDuration, Animation.PlayMode mode) {
+        Texture sheet = assetManager.get(path, Texture.class);
+        return buildDirectionalAnimations(sheet, cols, rows, frameDuration, mode);
+    }
+
+    private static Animation<TextureRegion>[] buildDirectionalAnimations(Texture sheet, int cols, int rows,
+                                                                         float frameDuration, Animation.PlayMode mode) {
+        TextureRegion[][] tmp = SpriteSheetLoader.split(sheet, cols, rows);
 
         @SuppressWarnings("unchecked")
         Animation<TextureRegion>[] anims = new Animation[rows];
@@ -47,7 +95,11 @@ public class PlayerAnimationLoader {
 
     public static void dispose() {
         if (sheets != null) {
-            for (Texture t : sheets.values()) t.dispose();
+            for (Texture t : sheets.values()) {
+                t.dispose();
+            }
+            sheets = null;
         }
+        animations = null;
     }
 }

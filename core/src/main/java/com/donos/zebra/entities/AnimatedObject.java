@@ -2,20 +2,21 @@ package com.donos.zebra.entities;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
+import com.donos.zebra.util.SpriteSheetLoader;
 
-public class AnimatedObject {
+public class AnimatedObject implements Entity {
 
     private Animation<TextureRegion> animation;
-    private Texture texture; // para dar dispose
+    private Texture texture;
     private float x, y;
     private float stateTime = 0f;
 
     public AnimatedObject(String spriteSheetPath, int frameCols, int frameRows, float x, float y, float frameDuration) {
         this.texture = new Texture(spriteSheetPath);
-        TextureRegion[][] tmp = TextureRegion.split(texture, texture.getWidth() / frameCols, texture.getHeight() / frameRows);
+        TextureRegion[][] tmp = SpriteSheetLoader.split(texture, frameCols, frameRows);
 
         Array<TextureRegion> frames = new Array<>();
         for (int i = 0; i < frameRows; i++) {
@@ -29,19 +30,27 @@ public class AnimatedObject {
         this.y = y;
     }
 
+    @Override
     public void update(float delta) {
         stateTime += delta;
     }
 
+    @Override
     public void render(SpriteBatch batch) {
         TextureRegion currentFrame = animation.getKeyFrame(stateTime);
         batch.draw(currentFrame, x, y);
     }
 
+    @Override
     public void dispose() {
         texture.dispose();
     }
 
-    public float getX() { return x; }
-    public float getY() { return y; }
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
 }
