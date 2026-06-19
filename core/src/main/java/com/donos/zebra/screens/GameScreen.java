@@ -28,6 +28,7 @@ public class GameScreen extends AbstractScreen {
 
     private static final boolean DEBUG_COLLISION = false;
     private static final float UNIT_SCALE = 1f;
+    private static final float CAMERA_ZOOM = 2.5f;
 
     private final MainGame game;
     private Player player;
@@ -57,14 +58,13 @@ public class GameScreen extends AbstractScreen {
 
         mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
         player = new Player(game.getAssetManager());
-        player.setOffsets(-8f, 0f);
         player.setPosition(levelData.spawnX, levelData.spawnY);
 
         entities.clear();
         entities.add(player);
 
         OrthographicCamera camera = new OrthographicCamera();
-        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        applyCameraViewport(camera);
         cameraController = new CameraController(camera);
 
         if (DEBUG_COLLISION) {
@@ -83,6 +83,7 @@ public class GameScreen extends AbstractScreen {
         mapRenderer.setView(cameraController.getCamera());
         mapRenderer.render();
 
+        batch.setProjectionMatrix(cameraController.getCamera().combined);
         beginBatch();
         for (Entity entity : entities) {
             entity.render(batch);
@@ -118,6 +119,22 @@ public class GameScreen extends AbstractScreen {
     }
 
     @Override
+    public void resize(int width, int height) {
+        if (cameraController != null) {
+            applyCameraViewport(cameraController.getCamera(), width, height);
+        }
+    }
+
+    private void applyCameraViewport(OrthographicCamera camera) {
+        applyCameraViewport(camera, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+    }
+
+    private void applyCameraViewport(OrthographicCamera camera, int width, int height) {
+        camera.setToOrtho(false, width / CAMERA_ZOOM, height / CAMERA_ZOOM);
+        camera.update();
+    }
+
+    @Override
     public void dispose() {
         super.dispose();
 
@@ -126,17 +143,17 @@ public class GameScreen extends AbstractScreen {
         }
         entities.clear();
 
-        if (mapRenderer != null) mapRenderer.dispose();
         if (proceduralMap) {
             DungeonMapAdapter.disposeProceduralResources(map);
         }
+        if (mapRenderer != null) mapRenderer.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
     }
 
     private LevelData loadLevelData() {
         if (GameConfig.USE_PROCEDURAL_DUNGEON) {
             DungeonMap dungeonMap = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
-            return DungeonMapAdapter.toLevelData(dungeonMap);
+            return DungeonMapAdapter.toLevelData(dungeonMap, game.getAssetManager());
         }
         return LevelLoader.load(game.getAssetManager(), LevelConstants.MAP_PATH);
     }

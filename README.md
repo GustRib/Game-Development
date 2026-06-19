@@ -5,6 +5,7 @@ Inspiração: Hero Siege
 Gênero: Rogue-like, Hack and Slash
 Engine: LibGDX
 Linguagem: Java 17
+Comando para rodar: .\gradlew.bat lwjgl3:run
 
 ⸻
 

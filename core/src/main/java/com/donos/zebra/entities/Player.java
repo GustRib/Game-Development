@@ -14,8 +14,10 @@ import java.util.Map;
 
 public class Player implements Entity {
 
-    static final float HITBOX_HALF_WIDTH = 6f;
-    static final float HITBOX_HALF_HEIGHT = 10f;
+    static final float HITBOX_HALF_WIDTH = 5f;
+    static final float HITBOX_HALF_HEIGHT = 6f;
+    static final float HITBOX_OFFSET_X = 0f;
+    static final float HITBOX_OFFSET_Y = -4f;
 
     private final PlayerInput input;
     private Map<String, Animation<TextureRegion>[]> animations;
@@ -34,6 +36,7 @@ public class Player implements Entity {
     private Direction lastDirection = Direction.DOWN;
 
     private Polygon hitbox;
+    private float[] hitboxLocalVertices;
     private final Polygon scratchX = new Polygon();
     private final Polygon scratchY = new Polygon();
 
@@ -76,7 +79,12 @@ public class Player implements Entity {
             -HITBOX_HALF_WIDTH, HITBOX_HALF_HEIGHT
         };
         hitbox = new Polygon(vertices);
-        hitbox.setPosition(x, y);
+        hitboxLocalVertices = vertices.clone();
+        syncHitboxPosition();
+    }
+
+    private void syncHitboxPosition() {
+        hitbox.setPosition(x + HITBOX_OFFSET_X, y + HITBOX_OFFSET_Y);
     }
 
     void setAnimations(Map<String, Animation<TextureRegion>[]> animations) {
@@ -125,7 +133,7 @@ public class Player implements Entity {
                 setCurrentAnimation(AnimationConstants.ANIM_IDLE);
             }
         } else if (moving) {
-            setCurrentAnimation(AnimationConstants.ANIM_WALK);
+            setCurrentAnimation(AnimationConstants.ANIM_RUN);
         } else {
             setCurrentAnimation(AnimationConstants.ANIM_IDLE);
         }
@@ -139,9 +147,12 @@ public class Player implements Entity {
     void move(float dx, float dy, Array<Polygon> collisionPolygons) {
         if ((dx == 0f && dy == 0f) || collisionPolygons == null) return;
 
+        float hitboxX = x + HITBOX_OFFSET_X;
+        float hitboxY = y + HITBOX_OFFSET_Y;
+
         if (dx != 0f) {
-            scratchX.setVertices(hitbox.getVertices());
-            scratchX.setPosition(x + dx, y);
+            scratchX.setVertices(hitboxLocalVertices);
+            scratchX.setPosition(hitboxX + dx, hitboxY);
             boolean collX = false;
             for (Polygon p : collisionPolygons) {
                 if (Intersector.overlapConvexPolygons(scratchX, p)) {
@@ -153,8 +164,8 @@ public class Player implements Entity {
         }
 
         if (dy != 0f) {
-            scratchY.setVertices(hitbox.getVertices());
-            scratchY.setPosition(x, y + dy);
+            scratchY.setVertices(hitboxLocalVertices);
+            scratchY.setPosition(x + HITBOX_OFFSET_X, hitboxY + dy);
             boolean collY = false;
             for (Polygon p : collisionPolygons) {
                 if (Intersector.overlapConvexPolygons(scratchY, p)) {
@@ -165,7 +176,7 @@ public class Player implements Entity {
             if (!collY) y += dy;
         }
 
-        hitbox.setPosition(x, y);
+        syncHitboxPosition();
     }
 
     private void updateAnimation(float delta) {
@@ -194,7 +205,7 @@ public class Player implements Entity {
     public void setPosition(float x, float y) {
         this.x = x;
         this.y = y;
-        hitbox.setPosition(x, y);
+        syncHitboxPosition();
     }
 
     public Polygon getHitbox() {

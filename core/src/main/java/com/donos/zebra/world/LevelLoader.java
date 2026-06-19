@@ -30,6 +30,10 @@ public final class LevelLoader {
         PlayerAnimationLoader.queueAssets(assetManager);
     }
 
+    public static void queueTilesetReference(AssetManager assetManager, String mapPath) {
+        assetManager.load(mapPath, TiledMap.class);
+    }
+
     public static LevelData load(AssetManager assetManager, String mapPath) {
         TiledMap map = assetManager.get(mapPath, TiledMap.class);
         return load(map);

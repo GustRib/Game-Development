@@ -26,6 +26,7 @@ public class LoadingScreen extends AbstractScreen {
         if (!assetsQueued) {
             if (GameConfig.USE_PROCEDURAL_DUNGEON) {
                 PlayerAnimationLoader.queueAssets(game.getAssetManager());
+                LevelLoader.queueTilesetReference(game.getAssetManager(), LevelConstants.MAP_PATH);
             } else {
                 LevelLoader.queueAssets(game.getAssetManager(), LevelConstants.MAP_PATH);
             }
