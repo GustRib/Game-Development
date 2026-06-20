@@ -19,6 +19,9 @@ public class Player implements Entity {
     static final float HITBOX_OFFSET_X = 0f;
     static final float HITBOX_OFFSET_Y = -4f;
 
+    private float currentHealth = 100f;
+    private boolean isDead = false;
+
     private final PlayerInput input;
     private Map<String, Animation<TextureRegion>[]> animations;
     private Animation<TextureRegion>[] currentAnimation;
@@ -227,5 +230,29 @@ public class Player implements Entity {
     public void setOffsets(float offsetX, float offsetY) {
         this.offsetX = offsetX;
         this.offsetY = offsetY;
+    }
+
+    @Override
+    public void takeDamage(float amount) {
+        if (isDead) return;
+        currentHealth -= amount;
+        if (currentHealth <= 0) {
+            currentHealth = 0;
+            isDead = true;
+        }
+    }
+
+    @Override
+    public boolean isDead() {
+        return isDead;
+    }
+
+    @Override
+    public float getCurrentHealth() {
+        return currentHealth;
+    }
+
+    public float getMaxHealth(){
+        return 100f;
     }
 }

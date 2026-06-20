@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.donos.zebra.util.SpriteSheetLoader;
+import com.badlogic.gdx.utils.Array;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -117,22 +118,57 @@ public class PlayerAnimationLoader {
     }
 
     private static Animation<TextureRegion>[] buildDirectionalAnimations(Texture sheet, int cols, int rows,
-                                                                         float frameDuration, Animation.PlayMode mode) {
+                                                                        float frameDuration, Animation.PlayMode mode) {
         TextureRegion[][] tmp = SpriteSheetLoader.split(sheet, cols, rows);
 
         @SuppressWarnings("unchecked")
         Animation<TextureRegion>[] anims = new Animation[rows];
 
         for (int r = 0; r < rows; r++) {
-            TextureRegion[] frames = new TextureRegion[cols];
+            // Usamos uma lista temporária do LibGDX para guardar apenas frames válidos
+            Array<TextureRegion> validFrames = new Array<>();
+            
             for (int c = 0; c < cols; c++) {
-                frames[c] = tmp[r][c];
+                TextureRegion frame = tmp[r][c];
+                
+                // Se o frame não for nulo e tiver conteúdo visual, nós adicionamos
+                if (frame != null && !isFrameEmpty(frame)) {
+                    validFrames.add(frame);
+                }
             }
-            anims[r] = new Animation<>(frameDuration, frames);
-            anims[r].setPlayMode(mode);
+            
+            // Cria a animação apenas com os frames que possuem desenhos reais
+            anims[r] = new Animation<>(frameDuration, validFrames, mode);
         }
 
         return anims;
+    }
+
+    /**
+     * Método auxiliar para detectar se um frame fatiado está completamente transparente/vazio
+     */
+    private static boolean isFrameEmpty(TextureRegion region) {
+        if (!region.getTexture().getTextureData().isPrepared()) {
+            region.getTexture().getTextureData().prepare();
+        }
+        
+        Pixmap pixmap = region.getTexture().getTextureData().consumePixmap();
+        int xStart = region.getRegionX();
+        int yStart = region.getRegionY();
+        int width = region.getRegionWidth();
+        int height = region.getRegionHeight();
+        
+        // Escaneia uma amostragem de pixels para ver se há alguma cor ativa (Alpha > 0)
+        for (int y = yStart; y < yStart + height; y += 2) {
+            for (int x = xStart; x < xStart + width; x += 2) {
+                int pixel = pixmap.getPixel(x, y);
+                int alpha = pixel & 0x000000ff; // Pega o canal Alpha
+                if (alpha > 5) { // Se não for transparente
+                    return false; // O frame tem conteúdo válido!
+                }
+            }
+        }
+        return true; // É um frame fantasma transparente
     }
 
     public static void dispose() {

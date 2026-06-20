@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.util.SpriteSheetLoader;
 
@@ -46,11 +47,35 @@ public class AnimatedObject implements Entity {
         texture.dispose();
     }
 
+    @Override
     public float getX() {
         return x;
     }
 
+    @Override
     public float getY() {
         return y;
+    }
+
+    // --- Implementação dos novos métodos da interface Entity para objetos de cenário ---
+
+    @Override
+    public void takeDamage(float amount) {
+        // Objetos animados decorativos (ex: tochas) são indestrutíveis por padrão
+    }
+
+    @Override
+    public boolean isDead() {
+        return false; // Nunca morre
+    }
+
+    @Override
+    public Polygon getHitbox() {
+        return null; // Não possui uma hitbox de combate/dano
+    }
+
+    @Override
+    public float getCurrentHealth() {
+        return 1f; // Valor neutro apenas para satisfazer o contrato
     }
 }
