@@ -42,3 +42,20 @@ Diferenciais Técnicos:
 •	HUD com nome do personagem
 
 * Data de início: 29-04-25
+
+
+## 🎵 Créditos de Áudio / Audio Credits
+
+Este projeto utiliza recursos de áudio sob licença comercial/atribuição. Abaixo estão listados os respectivos autores e faixas:
+
+* **Trilha Sonora da Tela Inicial (Main Menu Theme):**
+    * **Faixa:** *Track3(Huntress).mp3*
+    * **Autor/Compositor:** TurtleBox
+    * **Licença:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+    * **Fonte/Link do Asset:** Disponível no [Itch.io](https://itch.io) (Adquira ou conheça o trabalho do autor na plataforma).
+
+    * **Trilha Sonora do jogo (Game Screen Theme):**
+    * **Faixa:** *track5(Love and War).wav*
+    * **Autor/Compositor:** TurtleBox
+    * **Licença:** [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+    * **Fonte/Link do Asset:** Disponível no [Itch.io](https://itch.io) (Adquira ou conheça o trabalho do autor na plataforma).

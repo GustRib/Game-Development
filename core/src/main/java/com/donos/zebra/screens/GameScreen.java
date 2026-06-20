@@ -27,6 +27,7 @@ import com.donos.zebra.world.LevelData;
 import com.donos.zebra.world.LevelLoader;
 import com.donos.zebra.world.dungeon.DungeonGenerator;
 import com.donos.zebra.world.dungeon.DungeonMap;
+import com.badlogic.gdx.audio.Music;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +60,8 @@ public class GameScreen extends AbstractScreen {
     private CameraController cameraController;
     private Array<Rectangle> collisionRects;
     private Array<Polygon> collisionPolygons;
+
+    private Music gameplayMusic;
 
     private ShapeRenderer shapeRenderer;
 
@@ -120,6 +123,11 @@ public class GameScreen extends AbstractScreen {
             entities.add(new Orc(initialSpawnX + 60f, initialSpawnY + 60f, orcAnims));
             entities.add(new Orc(initialSpawnX + 120f, initialSpawnY - 40f, orcAnims));
         }
+
+        gameplayMusic = Gdx.audio.newMusic(Gdx.files.internal("track5.wav"));
+        gameplayMusic.setLooping(true); // Toca em loop infinito enquanto estiver na masmorra
+        gameplayMusic.setVolume(0.3f);  // Volume um pouco mais baixo (30%) para dar espaço aos SFX de combate
+        gameplayMusic.play();
     }
 
     @Override
@@ -315,6 +323,9 @@ public class GameScreen extends AbstractScreen {
 
     @Override
     public void dispose() {
+        if (gameplayMusic != null) {
+            gameplayMusic.dispose();
+        }
         super.dispose();
         for (Entity entity : entities) {
             entity.dispose();
