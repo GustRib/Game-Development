@@ -35,6 +35,10 @@ public class PlayerAnimationLoader {
         assetManager.load(AnimationConstants.WALK_SHEET_PATH, Texture.class);
         assetManager.load(AnimationConstants.RUN_SHEET_PATH, Texture.class);
         assetManager.load(AnimationConstants.ATTACK_SHEET_PATH, Texture.class);
+        
+        // CORRIGIDO: Agora aponta para a pasta correta "characters/Player1/..." via constantes
+        assetManager.load(AnimationConstants.HURT_SHEET_PATH, Texture.class);
+        assetManager.load(AnimationConstants.DEATH_SHEET_PATH, Texture.class);
     }
 
     public static Map<String, Animation<TextureRegion>[]> loadAnimations(AssetManager assetManager) {
@@ -61,6 +65,15 @@ public class PlayerAnimationLoader {
         animations.put(AnimationConstants.ANIM_ATTACK,
             loadDirectional(assetManager, AnimationConstants.ATTACK_SHEET_PATH,
                 AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
+
+        // CORRIGIDO: Usando as variáveis que contêm o caminho completo correto
+        animations.put("hurt",
+            loadDirectional(assetManager, AnimationConstants.HURT_SHEET_PATH,
+                0.08f, Animation.PlayMode.NORMAL));
+                
+        animations.put("death",
+            loadDirectional(assetManager, AnimationConstants.DEATH_SHEET_PATH,
+                0.1f, Animation.PlayMode.NORMAL));
     }
 
     private static Animation<TextureRegion>[] loadDirectional(AssetManager assetManager, String path,
@@ -118,35 +131,29 @@ public class PlayerAnimationLoader {
     }
 
     private static Animation<TextureRegion>[] buildDirectionalAnimations(Texture sheet, int cols, int rows,
-                                                                        float frameDuration, Animation.PlayMode mode) {
+                                                                          float frameDuration, Animation.PlayMode mode) {
         TextureRegion[][] tmp = SpriteSheetLoader.split(sheet, cols, rows);
 
         @SuppressWarnings("unchecked")
         Animation<TextureRegion>[] anims = new Animation[rows];
 
         for (int r = 0; r < rows; r++) {
-            // Usamos uma lista temporária do LibGDX para guardar apenas frames válidos
             Array<TextureRegion> validFrames = new Array<>();
             
             for (int c = 0; c < cols; c++) {
                 TextureRegion frame = tmp[r][c];
                 
-                // Se o frame não for nulo e tiver conteúdo visual, nós adicionamos
                 if (frame != null && !isFrameEmpty(frame)) {
                     validFrames.add(frame);
                 }
             }
             
-            // Cria a animação apenas com os frames que possuem desenhos reais
             anims[r] = new Animation<>(frameDuration, validFrames, mode);
         }
 
         return anims;
     }
 
-    /**
-     * Método auxiliar para detectar se um frame fatiado está completamente transparente/vazio
-     */
     private static boolean isFrameEmpty(TextureRegion region) {
         if (!region.getTexture().getTextureData().isPrepared()) {
             region.getTexture().getTextureData().prepare();
@@ -158,17 +165,16 @@ public class PlayerAnimationLoader {
         int width = region.getRegionWidth();
         int height = region.getRegionHeight();
         
-        // Escaneia uma amostragem de pixels para ver se há alguma cor ativa (Alpha > 0)
         for (int y = yStart; y < yStart + height; y += 2) {
             for (int x = xStart; x < xStart + width; x += 2) {
                 int pixel = pixmap.getPixel(x, y);
-                int alpha = pixel & 0x000000ff; // Pega o canal Alpha
-                if (alpha > 5) { // Se não for transparente
-                    return false; // O frame tem conteúdo válido!
+                int alpha = pixel & 0x000000ff;
+                if (alpha > 5) {
+                    return false;
                 }
             }
         }
-        return true; // É um frame fantasma transparente
+        return true;
     }
 
     public static void dispose() {

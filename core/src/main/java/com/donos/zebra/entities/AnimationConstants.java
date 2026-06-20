@@ -11,6 +11,10 @@ public final class AnimationConstants {
     public static final String WALK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Walk_with_shadow.png";
     public static final String RUN_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Run_with_shadow.png";
     public static final String ATTACK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Run_Attack_with_shadow.png";
+    
+    // ADICIONADO: Caminhos corretos baseados na estrutura do seu projeto
+    public static final String HURT_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Hurt_with_shadow.png";
+    public static final String DEATH_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Death_with_shadow.png";
 
     public static final int DIRECTION_ROWS = 4;
 

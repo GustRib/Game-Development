@@ -17,6 +17,10 @@ public class Orc extends Enemy {
     private float hurtTimer = 0f;
     private static final float HURT_DURATION = 0.4f; // Tempo que ele pisca em vermelho
 
+    private float attackCooldownTimer = 0f;
+    private static final float ATTACK_COOLDOWN = 1.5f; // Ele bate a cada 1.5 segundos
+    private static final float ATTACK_RANGE = 16f;
+
     public Orc(float x, float y, Map<String, Animation<TextureRegion>[]> orcAnimations) {
         super(x, y, 40f, 35f, 100f);
         this.animations = orcAnimations;
@@ -33,33 +37,52 @@ public class Orc extends Enemy {
     public void updateEnemy(Player player, float delta) {
         stateTime += delta;
 
-        // Se estiver morto, roda a animação de morte e não faz mais nada
         if (isDead) {
             if (currentAnimation != animations.get("death")) {
                 currentAnimation = animations.get("death");
-                stateTime = 0f; // Reinicia o tempo para começar a animação de morte do primeiro frame
+                stateTime = 0f;
             }
             return;
         }
 
-        // Diminui o temporizador de dano se ele foi atingido
         if (hurtTimer > 0) {
             hurtTimer -= delta;
+        }
+
+        // Diminui o tempo de espera do ataque
+        if (attackCooldownTimer > 0) {
+            attackCooldownTimer -= delta;
         }
 
         float oldX = this.x;
         float oldY = this.y;
 
-        chasePlayer(player, delta);
+        // Só persegue e se move se o jogador não estiver morto
+        if (!player.isDead()) {
+            chasePlayer(player, delta);
+        }
 
         float dx = this.x - oldX;
         float dy = this.y - oldY;
         boolean moving = (dx != 0 || dy != 0);
 
+        // Lógica de ataque: Se estiver perto e o cooldown zerou, o orc ataca!
+        float distanceToPlayer = com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());            com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());
+            
+        boolean attacking = false;
+        if (!player.isDead() && distanceToPlayer <= ATTACK_RANGE && attackCooldownTimer <= 0) {
+            attackCooldownTimer = ATTACK_COOLDOWN;
+            player.takeDamage(15f); // Orc arranca 15 de vida
+            attacking = true;
+            this.stateTime = 0f; // Reinicia para tocar o frame de ataque
+        }
+
         // Define qual animação usar com base no estado atual
         if (animations != null) {
             if (hurtTimer > 0 && animations.containsKey("hurt")) {
                 this.currentAnimation = animations.get("hurt");
+            } else if (attacking && animations.containsKey(AnimationConstants.ANIM_ATTACK)) {
+                this.currentAnimation = animations.get(AnimationConstants.ANIM_ATTACK);
             } else if (moving) {
                 if (Math.abs(dx) > Math.abs(dy)) {
                     facingDirection = dx > 0 ? Direction.RIGHT : Direction.LEFT;

@@ -22,6 +22,9 @@ public class Player implements Entity {
     private float currentHealth = 100f;
     private boolean isDead = false;
 
+    private float hurtTimer = 0f;
+    private static final float HURT_DURATION = 0.3f;
+
     private final PlayerInput input;
     private Map<String, Animation<TextureRegion>[]> animations;
     private Animation<TextureRegion>[] currentAnimation;
@@ -103,10 +106,21 @@ public class Player implements Entity {
     }
 
     public void update(float delta, Array<Polygon> collisionPolygons) {
+        if (isDead) {
+            setCurrentAnimation("death");
+            updateAnimation(delta);
+            return;
+        }
+
+        if (hurtTimer > 0) {
+            hurtTimer -= delta;
+        }
+
         boolean moving = false;
         Direction currentDirection = lastDirection;
 
-        if (!isAttacking) {
+        // Só permite andar/atacar se NÃO estiver na animação de tomar dano
+        if (!isAttacking && hurtTimer <= 0) {
             Vector2 velocity = input.getIntendedVelocity(delta);
             move(velocity.x, velocity.y, collisionPolygons);
             moving = input.isMoving();
@@ -128,7 +142,9 @@ public class Player implements Entity {
     }
 
     private void updateAnimationState(boolean moving) {
-        if (isAttacking) {
+        if (hurtTimer > 0) {
+            setCurrentAnimation("hurt");
+        } else if (isAttacking) {
             setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
             if (currentAnimation[lastDirection.ordinal()].isAnimationFinished(stateTime)) {
                 isAttacking = false;
@@ -192,7 +208,7 @@ public class Player implements Entity {
 
     @Override
     public void render(SpriteBatch batch) {
-        TextureRegion currentFrame = currentAnimation[lastDirection.ordinal()].getKeyFrame(stateTime);
+        TextureRegion currentFrame = currentAnimation[lastDirection.ordinal()].getKeyFrame(stateTime, !isDead);
 
         batch.draw(currentFrame,
             x + offsetX - (currentFrame.getRegionWidth() * scale) / 2f,
@@ -239,6 +255,10 @@ public class Player implements Entity {
         if (currentHealth <= 0) {
             currentHealth = 0;
             isDead = true;
+            stateTime = 0f; // Reinicia para rodar a animação de morte do começo
+        } else {
+            hurtTimer = HURT_DURATION;
+            stateTime = 0f; // Reinicia para piscar/reproduzir animação de dano
         }
     }
 
