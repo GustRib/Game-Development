@@ -19,7 +19,13 @@ public class Orc extends Enemy {
 
     private float attackCooldownTimer = 0f;
     private static final float ATTACK_COOLDOWN = 1.5f; // Ele bate a cada 1.5 segundos
-    private static final float ATTACK_RANGE = 16f;
+    
+    // MODIFICADO: Aumentado levemente o alcance para o ataque encaixar visualmente melhor
+    private static final float ATTACK_RANGE = 24f; 
+    
+    // ADICIONADO: Controla por quanto tempo o Orc vai travar na animação de ataque
+    private float attackVisualTimer = 0f;
+    private static final float ATTACK_ANIM_DURATION = 0.6f; // Tempo total dos 6 frames de ataque (6 * 0.1s)
 
     public Orc(float x, float y, Map<String, Animation<TextureRegion>[]> orcAnimations) {
         super(x, y, 40f, 35f, 100f);
@@ -49,6 +55,11 @@ public class Orc extends Enemy {
             hurtTimer -= delta;
         }
 
+        // Atualiza o tempo restante da animação do golpe
+        if (attackVisualTimer > 0) {
+            attackVisualTimer -= delta;
+        }
+
         // Diminui o tempo de espera do ataque
         if (attackCooldownTimer > 0) {
             attackCooldownTimer -= delta;
@@ -57,8 +68,8 @@ public class Orc extends Enemy {
         float oldX = this.x;
         float oldY = this.y;
 
-        // Só persegue e se move se o jogador não estiver morto
-        if (!player.isDead()) {
+        // O Orc FICA PARADO enquanto estiver desferindo o golpe (attackVisualTimer > 0)
+        if (!player.isDead() && attackVisualTimer <= 0) {
             chasePlayer(player, delta);
         }
 
@@ -66,22 +77,22 @@ public class Orc extends Enemy {
         float dy = this.y - oldY;
         boolean moving = (dx != 0 || dy != 0);
 
-        // Lógica de ataque: Se estiver perto e o cooldown zerou, o orc ataca!
-        float distanceToPlayer = com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());            com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());
+        // Lógica de ataque: Se estiver perto e o cooldown zerou, o orc inicia o ataque!
+        float distanceToPlayer = com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());
             
-        boolean attacking = false;
         if (!player.isDead() && distanceToPlayer <= ATTACK_RANGE && attackCooldownTimer <= 0) {
             attackCooldownTimer = ATTACK_COOLDOWN;
+            attackVisualTimer = ATTACK_ANIM_DURATION; // Ativa a janela de tempo da animação
             player.takeDamage(15f); // Orc arranca 15 de vida
-            attacking = true;
-            this.stateTime = 0f; // Reinicia para tocar o frame de ataque
+            this.stateTime = 0f; // Reinicia para tocar o frame de ataque do começo
         }
 
         // Define qual animação usar com base no estado atual
         if (animations != null) {
             if (hurtTimer > 0 && animations.containsKey("hurt")) {
                 this.currentAnimation = animations.get("hurt");
-            } else if (attacking && animations.containsKey(AnimationConstants.ANIM_ATTACK)) {
+            } else if (attackVisualTimer > 0 && animations.containsKey(AnimationConstants.ANIM_ATTACK)) {
+                // Mantém a animação de ataque ativa enquanto o cronômetro visual não zerar!
                 this.currentAnimation = animations.get(AnimationConstants.ANIM_ATTACK);
             } else if (moving) {
                 if (Math.abs(dx) > Math.abs(dy)) {
@@ -103,6 +114,7 @@ public class Orc extends Enemy {
         if (!isDead) {
             this.hurtTimer = HURT_DURATION;
             this.stateTime = 0f; // Reinicia para ver a animação do dano desde o começo
+            this.attackVisualTimer = 0f; // Interrompe o ataque se ele tomar um golpe (opcional)
         }
     }
 
@@ -111,7 +123,6 @@ public class Orc extends Enemy {
 
     @Override
     public void render(SpriteBatch batch) {
-        // Garantimos que ele renderiza mesmo se isDead for true para podermos ver o corpo
         if (currentAnimation == null) return;
 
         int dirIndex = facingDirection.ordinal();
@@ -119,8 +130,11 @@ public class Orc extends Enemy {
             dirIndex = 0; 
         }
 
-        // Se for a animação de morte, não colocamos em loop (passamos "false" no getKeyFrame)
-        boolean looping = !isDead && (currentAnimation != animations.get("hurt"));
+        // Não loopamos animações de Morte, Dano ou Ataque para não ficarem repetindo loucamente
+        boolean looping = !isDead && 
+                            (currentAnimation != animations.get("hurt")) && 
+                            (currentAnimation != animations.get(AnimationConstants.ANIM_ATTACK));
+                        
         TextureRegion currentFrame = currentAnimation[dirIndex].getKeyFrame(stateTime, looping);
 
         batch.draw(currentFrame,

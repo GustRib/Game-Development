@@ -206,6 +206,23 @@ public class Player implements Entity {
         stateTime += delta;
     }
 
+    public void revive(float spawnX, float spawnY) {
+        // 1. Restaura a saúde e limpa os estados de dano acumulados
+        this.currentHealth = getMaxHealth();
+        this.isDead = false;
+        this.hurtTimer = 0f;
+        this.isAttacking = false;
+        
+        // 2. Reposiciona o herói no ponto inicial de spawn de forma segura
+        setPosition(spawnX, spawnY);
+        
+        // 3. Força o estado visual a voltar imediatamente para o Idle em repouso
+        this.lastDirection = Direction.DOWN; // Opcional: faz o player renascer olhando para baixo
+        setCurrentAnimation(AnimationConstants.ANIM_IDLE);
+        this.previousAnimation = currentAnimation;
+        this.stateTime = 0f;
+    }
+
     @Override
     public void render(SpriteBatch batch) {
         TextureRegion currentFrame = currentAnimation[lastDirection.ordinal()].getKeyFrame(stateTime, !isDead);

@@ -44,6 +44,13 @@ public class GameScreen extends AbstractScreen {
     
     // Lista para controlar os textos de dano na tela
     private final List<DamageText> damageTexts = new ArrayList<>();
+
+    private float initialSpawnX;
+    private float initialSpawnY;
+    
+    // ADICIONADO: Guarda a referência da masmorra gerada para sabermos onde ficam as salas
+    private DungeonMap dungeonMap;
+
     private BitmapFont damageFont;
 
     private TiledMap map;
@@ -70,7 +77,11 @@ public class GameScreen extends AbstractScreen {
 
         mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
         player = new Player(game.getAssetManager());
-        player.setPosition(levelData.spawnX, levelData.spawnY);
+        
+        // Guarda as posições iniciais
+        initialSpawnX = levelData.spawnX;
+        initialSpawnY = levelData.spawnY;
+        player.setPosition(initialSpawnX, initialSpawnY);
 
         entities.clear();
         entities.add(player);
@@ -78,21 +89,40 @@ public class GameScreen extends AbstractScreen {
 
         // Inicializa a fonte padrão e o ShapeRenderer
         damageFont = new BitmapFont(); 
-        damageFont.getData().setScale(0.6f); // Deixa a fonte menorzinha para combinar com a escala pixel art
+        damageFont.getData().setScale(0.6f); 
         shapeRenderer = new ShapeRenderer();
 
         OrthographicCamera camera = new OrthographicCamera();
         applyCameraViewport(camera);
         cameraController = new CameraController(camera);
 
+        // Carrega as animações do Orc
         Map<String, com.badlogic.gdx.graphics.g2d.Animation<TextureRegion>[]> orcAnims = 
             com.donos.zebra.entities.OrcAnimationLoader.loadAnimations(game.getAssetManager());
             
-        Orc testOrc = new Orc(levelData.spawnX + 50f, levelData.spawnY + 50f, orcAnims);
-        entities.add(testOrc);
+        // --- SPAWN DINÂMICO E PERSISTENTE DE ORCS POR SALA ---
+        if (proceduralMap && dungeonMap != null && dungeonMap.getRooms() != null) {
+            int tileSize = dungeonMap.getTileSize();
+
+            for (com.donos.zebra.world.dungeon.Room sala : dungeonMap.getRooms()) {
+                // Converte a coordenada central da sala (em número de Tiles) para pixels no Mundo do jogo
+                float salaCentroX = sala.getCenterX() * tileSize + tileSize / 2f;
+                float salaCentroY = sala.getCenterY() * tileSize + tileSize / 2f;
+
+                // Evita criar um inimigo na primeira sala (onde o jogador nasce)
+                float distanciaDoSpawn = com.badlogic.gdx.math.Vector2.dst(initialSpawnX, initialSpawnY, salaCentroX, salaCentroY);
+                if (distanciaDoSpawn > 48f) { 
+                    entities.add(new Orc(salaCentroX, salaCentroY, orcAnims));
+                }
+            }
+        } else {
+            // Fallback de contingência caso use mapa fixo estático
+            entities.add(new Orc(initialSpawnX + 60f, initialSpawnY + 60f, orcAnims));
+            entities.add(new Orc(initialSpawnX + 120f, initialSpawnY - 40f, orcAnims));
+        }
     }
 
-@Override
+    @Override
     public void render(float delta) {
         clearScreen(0, 0, 0, 1);
 
@@ -128,9 +158,7 @@ public class GameScreen extends AbstractScreen {
             }
         }
 
-        // ====================================================================
-        // AQUI ESTÁ O BLOCO ENCAIXADO! (Substituiu o loop de atualização antigo)
-        // ====================================================================
+        // --- Loop de Atualização de Entidades ---
         float playerOldHealth = player.getCurrentHealth();
 
         for (int i = entities.size() - 1; i >= 0; i--) {
@@ -156,7 +184,6 @@ public class GameScreen extends AbstractScreen {
                 ent.update(delta);
             }
         }
-        // ====================================================================
 
         cameraController.follow(player.getX(), player.getY());
         mapRenderer.setView(cameraController.getCamera());
@@ -199,8 +226,8 @@ public class GameScreen extends AbstractScreen {
         }
 
         if (player.isDead()) {
-        drawGameOverScreen();
-    }
+            drawGameOverScreen();
+        }
     }
 
     private void drawGameOverScreen() {
@@ -222,7 +249,7 @@ public class GameScreen extends AbstractScreen {
 
         // 2. Desenhar os Textos na Tela
         batch.setProjectionMatrix(cameraController.getCamera().combined);
-        beginBatch(); // Usa o seu método auxiliar de abrir o batch
+        beginBatch();
         
         // Configura a fonte para o aviso principal
         damageFont.setColor(com.badlogic.gdx.graphics.Color.RED);
@@ -235,12 +262,16 @@ public class GameScreen extends AbstractScreen {
         damageFont.draw(batch, "Pressione [ R ] para Renascer", camX - 70f, camY - 10f);
         damageFont.draw(batch, "Pressione [ ESC ] para Sair", camX - 62f, camY - 30f);
         
-        endBatch(); // Fecha o batch safely
+        endBatch();
 
-        // 3. Lógica de Entrada de Teclado (Input)
+        // 3. Lógica de Entrada de Teclado (Input) - ESTILO SOULS-LIKE
         if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.R)) {
-            // Renasce criando uma nova instância da GameScreen
-            game.setScreen(new GameScreen(game));
+            // Usa o novo método completo do Player para curar e resetar as flags internas de travamento
+            player.revive(initialSpawnX, initialSpawnY);
+            
+            // Força um update instantâneo para reciclar o estado visual e colisor para a nova posição
+            player.update(0, collisionPolygons); 
+            
         } else if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
             // Fecha a aplicação com segurança
             Gdx.app.exit();
@@ -299,8 +330,9 @@ public class GameScreen extends AbstractScreen {
 
     private LevelData loadLevelData() {
         if (GameConfig.USE_PROCEDURAL_DUNGEON) {
-            DungeonMap dungeonMap = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
-            return DungeonMapAdapter.toLevelData(dungeonMap, game.getAssetManager());
+            // Captura o DungeonMap e guarda o estado das salas geradas na variável global antes de retornar o LevelData
+            this.dungeonMap = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
+            return DungeonMapAdapter.toLevelData(this.dungeonMap, game.getAssetManager());
         }
         return LevelLoader.load(game.getAssetManager(), LevelConstants.MAP_PATH);
     }
