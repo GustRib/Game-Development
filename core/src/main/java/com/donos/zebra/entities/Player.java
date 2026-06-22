@@ -19,6 +19,7 @@ public class Player implements Entity {
     static final float HITBOX_OFFSET_X = 0f;
     static final float HITBOX_OFFSET_Y = -4f;
 
+    private ProgressionComponent progression;
     private float currentHealth = 100f;
     private boolean isDead = false;
 
@@ -48,6 +49,7 @@ public class Player implements Entity {
 
     public Player() {
         this(new PlayerInput());
+        this.progression = new ProgressionComponent();
     }
 
     public Player(AssetManager assetManager) {
@@ -242,6 +244,10 @@ public class Player implements Entity {
         this.x = x;
         this.y = y;
         syncHitboxPosition();
+    }
+
+    public ProgressionComponent getProgression() {
+        return progression;
     }
 
     public Polygon getHitbox() {

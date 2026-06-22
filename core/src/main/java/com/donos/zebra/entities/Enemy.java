@@ -11,6 +11,16 @@ public abstract class Enemy implements Entity {
     protected float speed;
     protected float aggroRange;
 
+    private boolean xpGranted = false;
+
+    public boolean isXpGranted() { 
+        return xpGranted; 
+    }
+    
+    public void setXpGranted(boolean xpGranted) { 
+        this.xpGranted = xpGranted; 
+    }
+
     public Enemy(float x, float y, float maxHealth, float speed, float aggroRange) {
         this.x = x;
         this.y = y;

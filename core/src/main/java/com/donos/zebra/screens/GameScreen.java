@@ -140,9 +140,13 @@ public class GameScreen extends AbstractScreen {
 
         // --- Combate & Geração de Números de Dano do Player ---
         if (player.getCurrentAnimationKey().equals(com.donos.zebra.entities.AnimationConstants.ANIM_ATTACK) && Gdx.input.justTouched()) { 
+             
             float attackRange = 24f;
-            float attackDamage = 10f;
+
+            // Puxa o dano do sistema de progressão!
+            float attackDamage = player.getProgression().getAttackDamage();
             
+            // loop do combate 
             for (int i = entities.size() - 1; i >= 0; i--) {
                 Entity ent = entities.get(i);
                 if (ent instanceof Enemy && !ent.isDead()) {
