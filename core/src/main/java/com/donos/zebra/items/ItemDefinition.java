@@ -13,12 +13,13 @@ public class ItemDefinition {
     private final int maxStackSize;      // Limite de empilhamento (ex: 99 para recursos, 1 para armas)
     private final int value;             // Valor de compra/venda na loja
     private final boolean isConsumable;  // Define se o item some ao ser usado (ex: poções, comida)
+    private final String iconPath;       // NOVA PROPRIEDADE: Caminho do asset visual do ícone (ex: "items/copper_ore.png")
 
     /**
      * Construtor completo para definir as propriedades fixas do item.
      */
     public ItemDefinition(String id, String name, String description, ItemType type, 
-                            int maxStackSize, int value, boolean isConsumable) {
+                          int maxStackSize, int value, boolean isConsumable, String iconPath) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -26,6 +27,7 @@ public class ItemDefinition {
         this.maxStackSize = maxStackSize;
         this.value = value;
         this.isConsumable = isConsumable;
+        this.iconPath = iconPath;
     }
 
     // --- GETTERS (Sem Setters, para garantir a imutabilidade) ---
@@ -56,6 +58,13 @@ public class ItemDefinition {
 
     public boolean isConsumable() {
         return isConsumable;
+    }
+
+    /**
+     * @return O caminho interno na pasta de assets para a textura do ícone.
+     */
+    public String getIconPath() {
+        return iconPath;
     }
 
     @Override

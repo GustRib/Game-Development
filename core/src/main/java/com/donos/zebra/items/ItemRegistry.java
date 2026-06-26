@@ -29,7 +29,8 @@ public class ItemRegistry {
                 ItemType.RESOURCE,
                 99,  // maxStackSize
                 5,   // valor de venda
-                false // não consumível diretamente
+                false, // não consumível diretamente
+                "items/copper_ore.png" // Caminho visual do asset
         );
 
         // 2. Minério de Ferro (Recurso empilhável até 99)
@@ -40,7 +41,8 @@ public class ItemRegistry {
                 ItemType.RESOURCE,
                 99,
                 12,
-                false
+                false,
+                "items/iron_ore.png"
         );
 
         // 3. Espada de Ferro (Arma não empilhável, valor alto)
@@ -51,7 +53,8 @@ public class ItemRegistry {
                 ItemType.WEAPON,
                 1,   // Armas não acumulam no mesmo slot!
                 150,
-                false
+                false,
+                "items/iron_sword.png"
         );
 
         // 4. Poção de Vida (Consumível empilhável até 10)
@@ -62,7 +65,8 @@ public class ItemRegistry {
                 ItemType.CONSUMABLE,
                 10,  // Limite menor para poções
                 25,
-                true // É consumível!
+                true, // É consumível!
+                "items/health_potion.png"
         );
 
         // Registrando todos no mapa interno automaticamente
@@ -82,7 +86,7 @@ public class ItemRegistry {
     /**
      * Busca uma definição de item a partir do seu ID único.
      * Muito útil para quando o jogo carregar dados salvos ou comandos de console.
-     * * @param id O ID do item (ex: "copper_ore").
+     * @param id O ID do item (ex: "copper_ore").
      * @return A definição do item ou null se não for encontrado.
      */
     public static ItemDefinition getItem(String id) {

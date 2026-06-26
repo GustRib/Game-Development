@@ -1,6 +1,7 @@
 package com.donos.zebra.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.donos.zebra.MainGame;
 import com.donos.zebra.config.GameConfig;
@@ -24,6 +25,12 @@ public class LoadingScreen extends AbstractScreen {
     @Override
     public void show() {
         if (!assetsQueued) {
+            // --- CARREGAMENTO DOS ASSETS DE ITENS ---
+            game.getAssetManager().load("items/copper_ore.png", Texture.class);
+            // game.getAssetManager().load("items/iron_ore.png", Texture.class);
+            // game.getAssetManager().load("items/iron_sword.png", Texture.class);
+            // game.getAssetManager().load("items/health_potion.png", Texture.class);
+
             if (GameConfig.USE_PROCEDURAL_DUNGEON) {
                 PlayerAnimationLoader.queueAssets(game.getAssetManager());
                 LevelLoader.queueTilesetReference(game.getAssetManager(), LevelConstants.MAP_PATH);
