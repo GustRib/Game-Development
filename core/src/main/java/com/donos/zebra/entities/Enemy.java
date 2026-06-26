@@ -1,6 +1,9 @@
 package com.donos.zebra.entities;
 
 import com.badlogic.gdx.math.Vector2;
+import com.donos.zebra.items.ItemStack;
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class Enemy implements Entity {
     protected float x, y;
@@ -8,6 +11,10 @@ public abstract class Enemy implements Entity {
     protected float currentHealth;
     protected boolean isDead = false;
     
+    //Controle de Loot e Estado de Saque
+    protected boolean isLooted = false;
+    protected final List<ItemStack> lootTable = new ArrayList<>();
+
     protected float speed;
     protected float aggroRange;
 
@@ -57,6 +64,39 @@ public abstract class Enemy implements Entity {
             currentHealth = 0;
             isDead = true;
         }
+    }
+
+    /**
+     * Verifica se o corpo do inimigo está elegível para ser looteado.
+     * Um inimigo pode ser saqueado apenas se estiver morto, não tiver sido looteado ainda
+     * e possuir itens em seu inventário interno.
+     */
+    public boolean hasLootAvailable() {
+        return isDead && !isLooted && !lootTable.isEmpty();
+    }
+
+    /**
+     * Retorna a lista de itens contida no corpo do inimigo.
+     */
+    public List<ItemStack> getLootTable() {
+        return lootTable;
+    }
+
+    /**
+     * Marca o corpo do inimigo como looteado e limpa seus itens internos.
+     * Garante que o loot exista apenas uma única vez no mundo.
+     */
+    public void clearLoot() {
+        this.lootTable.clear();
+        this.isLooted = true;
+        System.out.println("O corpo do inimigo foi completamente saqueado e esvaziado.");
+    }
+
+    /**
+     * Verifica se o inimigo já foi completamente limpo pelo jogador.
+     */
+    public boolean isLooted() {
+        return isLooted;
     }
 
     @Override

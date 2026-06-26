@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.world.LevelConstants;
+import com.donos.zebra.items.Inventory;
 
 import java.util.Map;
 
@@ -45,6 +46,10 @@ public class Player implements Entity {
     private float[] hitboxLocalVertices;
     private final Polygon scratchX = new Polygon();
     private final Polygon scratchY = new Polygon();
+
+    // --- SISTEMA DE ITENS ---
+    private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
+    private boolean isInteracting = false;                  // Trava o jogador na tela de loot
 
     public Player() {
         this(new PlayerInput());
@@ -119,8 +124,8 @@ public class Player implements Entity {
         boolean moving = false;
         Direction currentDirection = lastDirection;
 
-        // Só permite andar/atacar se NÃO estiver na animação de tomar dano
-        if (!isAttacking && hurtTimer <= 0) {
+        //Adicionada a trava !isInteracting para impedir andar/atacar com o menu de loot aberto
+        if (!isInteracting && !isAttacking && hurtTimer <= 0) {
             Vector2 velocity = input.getIntendedVelocity(delta);
             move(velocity.x, velocity.y, collisionPolygons);
             moving = input.isMoving();
@@ -207,17 +212,15 @@ public class Player implements Entity {
     }
 
     public void revive(float spawnX, float spawnY) {
-        // 1. Restaura a saúde e limpa os estados de dano acumulados
         this.currentHealth = getMaxHealth();
         this.isDead = false;
         this.hurtTimer = 0f;
         this.isAttacking = false;
+        this.isInteracting = false;
         
-        // 2. Reposiciona o herói no ponto inicial de spawn de forma segura
         setPosition(spawnX, spawnY);
         
-        // 3. Força o estado visual a voltar imediatamente para o Idle em repouso
-        this.lastDirection = Direction.DOWN; // Opcional: faz o player renascer olhando para baixo
+        this.lastDirection = Direction.DOWN;
         setCurrentAnimation(AnimationConstants.ANIM_IDLE);
         this.previousAnimation = currentAnimation;
         this.stateTime = 0f;
@@ -272,10 +275,10 @@ public class Player implements Entity {
         if (currentHealth <= 0) {
             currentHealth = 0;
             isDead = true;
-            stateTime = 0f; // Reinicia para rodar a animação de morte do começo
+            stateTime = 0f;
         } else {
             hurtTimer = HURT_DURATION;
-            stateTime = 0f; // Reinicia para piscar/reproduzir animação de dano
+            stateTime = 0f;
         }
     }
 
@@ -291,5 +294,26 @@ public class Player implements Entity {
 
     public float getMaxHealth(){
         return 100f;
+    }
+
+    /**
+     * @return O inventário do jogador, única fonte de verdade para posse de itens.
+     */
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    /**
+     * Define se o jogador está com uma janela de interação aberta (congelando movimentos).
+     */
+    public void setInteracting(boolean interacting) {
+        this.isInteracting = interacting;
+    }
+
+    /**
+     * @return true se o jogador estiver ocupado interagindo com um corpo/baú/NPC.
+     */
+    public boolean isInteracting() {
+        return isInteracting;
     }
 }

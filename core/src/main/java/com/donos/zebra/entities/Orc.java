@@ -5,6 +5,8 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Polygon;
+import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.items.ItemStack;
 
 public class Orc extends Enemy {
     private final Map<String, Animation<TextureRegion>[]> animations;
@@ -20,10 +22,8 @@ public class Orc extends Enemy {
     private float attackCooldownTimer = 0f;
     private static final float ATTACK_COOLDOWN = 1.5f; // Ele bate a cada 1.5 segundos
     
-    // MODIFICADO: Aumentado levemente o alcance para o ataque encaixar visualmente melhor
     private static final float ATTACK_RANGE = 24f; 
     
-    // ADICIONADO: Controla por quanto tempo o Orc vai travar na animação de ataque
     private float attackVisualTimer = 0f;
     private static final float ATTACK_ANIM_DURATION = 0.6f; // Tempo total dos 6 frames de ataque (6 * 0.1s)
 
@@ -38,6 +38,10 @@ public class Orc extends Enemy {
         float[] vertices = { -5f, -6f, 5f, -6f, 5f, 6f, -5f, 6f };
         this.hitbox = new Polygon(vertices);
         this.hitbox.setPosition(x, y);
+
+        // ADICIONAR LOOT FIXO NO SPAWN ---
+        // Adiciona exatamente 3 unidades de Minério de Cobre para testes(remover depois)
+        this.lootTable.add(new ItemStack(ItemRegistry.COPPER_ORE, 3));
     }
 
     public void updateEnemy(Player player, float delta) {
@@ -48,7 +52,7 @@ public class Orc extends Enemy {
                 currentAnimation = animations.get("death");
                 stateTime = 0f;
             }
-            return;
+            return; // Bloqueia a IA, movimento e ataques. O corpo fica estático no chão pronto para ser looteado.
         }
 
         if (hurtTimer > 0) {
