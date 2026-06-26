@@ -2,7 +2,7 @@ package com.donos.zebra.world;
 
 public final class LevelConstants {
 
-    public static final String MAP_PATH = "maps/Dungeon1.tmx";
+    public static final String MAP_PATH = "maps/prototipo.tmx";
 
     /**
      * walls_floor tileset (firstgid=377, columns=17).
