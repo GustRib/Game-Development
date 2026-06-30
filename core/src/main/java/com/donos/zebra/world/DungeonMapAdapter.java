@@ -41,7 +41,10 @@ public final class DungeonMapAdapter {
             dungeonMap.getSpawnX(),
             dungeonMap.getSpawnY(),
             collisionRects,
-            collisionPolygons
+            collisionPolygons,
+            0f,
+            0f,
+            false
         );
     }
 

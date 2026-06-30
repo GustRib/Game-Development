@@ -27,6 +27,9 @@ public final class LevelLoader {
     public static void queueAssets(AssetManager assetManager, String mapPath) {
         assetManager.load(mapPath, TiledMap.class);
         PlayerAnimationLoader.queueAssets(assetManager);
+        
+        // ADICIONE ESTA LINHA AQUI: Enfileira o Mentor junto com o mapa e o Player!
+        com.donos.zebra.entities.MentorAnimationLoader.queueAssets(assetManager);
     }
 
     public static void queueTilesetReference(AssetManager assetManager, String mapPath) {
@@ -42,9 +45,16 @@ public final class LevelLoader {
         float spawnX = LevelConstants.DEFAULT_SPAWN_X;
         float spawnY = LevelConstants.DEFAULT_SPAWN_Y;
 
+        // --- VARIÁVEIS DO MENTOR ---
+        float mentorX = 0f;
+        float mentorY = 0f;
+        boolean hasMentor = false;
+
         MapLayer spawnLayer = map.getLayers().get(LevelConstants.SPAWN_LAYER);
         if (spawnLayer != null) {
             MapObjects spawnObjects = spawnLayer.getObjects();
+            
+            // 1. Lógica original do Spawn do Player
             MapObject spawn = spawnObjects.get(LevelConstants.SPAWN_OBJECT);
             if (spawn == null && spawnObjects.getCount() > 0) {
                 spawn = spawnObjects.get(0);
@@ -76,11 +86,36 @@ public final class LevelLoader {
                 Gdx.app.error("SPAWN", "Nenhum objeto encontrado na layer spawn; using default position ("
                     + LevelConstants.DEFAULT_SPAWN_X + ", " + LevelConstants.DEFAULT_SPAWN_Y + ").");
             }
+
+            // 2. NOVA LÓGICA: Busca o objeto chamado "Mentor" na mesma camada de Spawns
+            MapObject mentorObj = spawnObjects.get("Mentor");
+            if (mentorObj != null) {
+                Float mx = null;
+                Float my = null;
+
+                if (mentorObj instanceof RectangleMapObject) {
+                    Rectangle r = ((RectangleMapObject) mentorObj).getRectangle();
+                    mx = r.x + r.width / 2f;
+                    my = r.y + r.height / 2f;
+                } else {
+                    MapProperties p = mentorObj.getProperties();
+                    mx = p.get("x", Float.class);
+                    my = p.get("y", Float.class);
+                }
+
+                if (mx != null && my != null) {
+                    mentorX = mx;
+                    mentorY = my;
+                    hasMentor = true;
+                    Gdx.app.log("SPAWN", "Mentor detectado no Tiled em: " + mentorX + ", " + mentorY);
+                }
+            }
         } else {
             Gdx.app.error("SPAWN", "Camada 'spawn' não encontrada! Using default position ("
                 + LevelConstants.DEFAULT_SPAWN_X + ", " + LevelConstants.DEFAULT_SPAWN_Y + ").");
         }
 
+        // 3. Lógica de Colisões original
         Array<Rectangle> collisionRects = new Array<>();
         MapLayer collisionLayer = map.getLayers().get(LevelConstants.COLLISION_LAYER);
         if (collisionLayer != null) {
@@ -96,7 +131,9 @@ public final class LevelLoader {
         }
 
         Array<Polygon> collisionPolygons = buildCollisionPolygons(collisionRects);
-        return new LevelData(map, spawnX, spawnY, collisionRects, collisionPolygons);
+        
+        // Retorna o LevelData passando os 3 novos parâmetros do Mentor no final
+        return new LevelData(map, spawnX, spawnY, collisionRects, collisionPolygons, mentorX, mentorY, hasMentor);
     }
 
     private static Array<Polygon> buildCollisionPolygons(Array<Rectangle> rects) {

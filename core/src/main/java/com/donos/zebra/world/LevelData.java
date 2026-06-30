@@ -12,13 +12,21 @@ public final class LevelData {
     public final float spawnY;
     public final Array<Rectangle> collisionRects;
     public final Array<Polygon> collisionPolygons;
+    
+    public final float mentorX;
+    public final float mentorY;
+    public final boolean hasMentor;
 
     public LevelData(TiledMap map, float spawnX, float spawnY,
-                     Array<Rectangle> collisionRects, Array<Polygon> collisionPolygons) {
+                    Array<Rectangle> collisionRects, Array<Polygon> collisionPolygons,
+                    float mentorX, float mentorY, boolean hasMentor) {
         this.map = map;
         this.spawnX = spawnX;
         this.spawnY = spawnY;
         this.collisionRects = collisionRects;
         this.collisionPolygons = collisionPolygons;
+        this.mentorX = mentorX;
+        this.mentorY = mentorY;
+        this.hasMentor = hasMentor;
     }
 }

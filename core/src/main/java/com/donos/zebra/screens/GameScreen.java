@@ -18,10 +18,12 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.donos.zebra.MainGame;
+import com.donos.zebra.Interaction.Interactable;
 import com.donos.zebra.config.DungeonGenerationConfig;
 import com.donos.zebra.config.GameConfig;
 import com.donos.zebra.entities.Enemy;
 import com.donos.zebra.entities.Entity;
+import com.donos.zebra.entities.MentorNpc;
 import com.donos.zebra.entities.Orc;
 import com.donos.zebra.entities.Player;
 import com.donos.zebra.entities.DamageText;
@@ -35,6 +37,7 @@ import com.donos.zebra.world.dungeon.DungeonGenerator;
 import com.donos.zebra.world.dungeon.DungeonMap;
 import com.badlogic.gdx.audio.Music;
 import com.donos.zebra.items.ItemStack;
+import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.ui.InventoryUI;
 import com.donos.zebra.ui.LootUI;
 
@@ -76,6 +79,10 @@ public class GameScreen extends AbstractScreen {
     private LootUI lootWindow;
     private Skin uiSkin;
 
+    private DialogueUI dialogueWindow;
+    private final List<Interactable> interactables = new ArrayList<>();
+    private Interactable activeInteractionTarget = null;
+
     public GameScreen(MainGame game) {
         super(game.batch);
         this.game = game;
@@ -104,22 +111,58 @@ public class GameScreen extends AbstractScreen {
         damageFont.getData().setScale(0.6f); 
         shapeRenderer = new ShapeRenderer();
 
-        // Inicialização do Stage gráfico de UI
-        uiStage = new Stage(new ScreenViewport());
-        Gdx.input.setInputProcessor(uiStage); 
+        // 1. INICIALIZA O PALCO PRIMEIRO: Sem isso, dá o erro de uiStage is null!
+        uiStage = new Stage(new com.badlogic.gdx.utils.viewport.ScreenViewport());
 
+        // 2. Cria a Skin passando a fonte válida
         uiSkin = InventoryUI.createDefaultSkin(damageFont);
-        
-        // 1. Janela de Inventário
+
+        // 3. Instancia a janela de Inventário usando a Skin
         inventoryWindow = new InventoryUI(player.getInventory(), uiSkin, game.getAssetManager());
-        inventoryWindow.setPosition(20, Gdx.graphics.getHeight() / 2f, Align.left);
+        
+        // 4. Aplica o posicionamento perfeito usando topLeft
+        inventoryWindow.setPosition(20, Gdx.graphics.getHeight() / 2f, com.badlogic.gdx.utils.Align.topLeft);
         uiStage.addActor(inventoryWindow);
 
-        // 2. Janela de Loot (Corpo)
+        // 5. Configura o Multiplexer com prioridade para o palco da UI
+        com.badlogic.gdx.InputMultiplexer multiplexer = new com.badlogic.gdx.InputMultiplexer();
+        multiplexer.addProcessor(uiStage); 
+        Gdx.input.setInputProcessor(multiplexer);
+
+        // 6. Cria as outras janelas de interface gráfica
         lootWindow = new LootUI(uiSkin, game.getAssetManager());
         lootWindow.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f + 100, Align.center);
         uiStage.addActor(lootWindow);
 
+        dialogueWindow = new DialogueUI(uiSkin);
+        dialogueWindow.setSize(400, 80);
+        dialogueWindow.setPosition(Gdx.graphics.getWidth() / 2f, 50, Align.bottom);
+        uiStage.addActor(dialogueWindow);
+
+        dialogueWindow = new DialogueUI(uiSkin);
+        dialogueWindow.setSize(400, 80);
+        dialogueWindow.setPosition(Gdx.graphics.getWidth() / 2f, 50, Align.bottom);
+        uiStage.addActor(dialogueWindow);
+
+        java.util.Map<String, com.badlogic.gdx.graphics.g2d.Animation<com.badlogic.gdx.graphics.g2d.TextureRegion>[]> mentorAnims = 
+        com.donos.zebra.entities.MentorAnimationLoader.loadAnimations(game.getAssetManager());
+        float mentorSpawnX;
+        float mentorSpawnY;
+
+        if (levelData.hasMentor) {
+            // Posição exata vinda do Tiled!
+            mentorSpawnX = levelData.mentorX;
+            mentorSpawnY = levelData.mentorY;
+        } else {
+            // Fallback caso você carregue algum mapa gerado proceduralmente que não possua o objeto
+            mentorSpawnX = levelData.spawnX + 40f;
+            mentorSpawnY = levelData.spawnY + 10f;
+        }
+
+        MentorNpc mentor = new MentorNpc(mentorSpawnX, mentorSpawnY, dialogueWindow, mentorAnims);
+        interactables.add(mentor);
+        entities.add(mentor);
+        
         OrthographicCamera camera = new OrthographicCamera();
         applyCameraViewport(camera);
         cameraController = new CameraController(camera);
@@ -262,27 +305,59 @@ public class GameScreen extends AbstractScreen {
     private void handleItemSystemInputs() {
         if (player.isDead()) return;
 
+        // --- SE ESTIVER EM DIÁLOGO, TRAVA OUTRAS ENTRADAS ---
+        if (dialogueWindow.isVisible()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                dialogueWindow.hideDialogue();
+                player.setInteracting(false);
+                activeInteractionTarget = null;
+            }
+            return; // Impede abrir inventário ou atacar enquanto fala
+        }
+
         // 1. Tecla I: Inverte visibilidade da Janela de Inventário Gráfica
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
-            if (lootWindow.isVisible()) return; // Ignora o inventário enquanto estiver looteando
+            if (lootWindow.isVisible()) return; 
             
             boolean isVisible = !inventoryWindow.isVisible();
             inventoryWindow.setVisible(isVisible);
             if (isVisible) inventoryWindow.refresh(); 
         }
 
-        // 2. Tecla E: Interação de Proximidade com o Corpo
+        // 2. Tecla E: Interação Geral (Corpos ou NPCs)
         if (!lootWindow.isVisible() && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            
+            // Primeiro tenta interagir com NPCs/Objetos do cenário
+            Interactable closestInteractable = null;
+            float minInteractDist = INTERACTION_RANGE;
+
+            for (Interactable inter : interactables) {
+                float dist = Vector2.dst(player.getX(), player.getY(), inter.getX(), inter.getY());
+                if (dist <= minInteractDist) {
+                    minInteractDist = dist;
+                    closestInteractable = inter;
+                }
+            }
+
+            if (closestInteractable != null) {
+                activeInteractionTarget = closestInteractable;
+                closestInteractable.onInteract(player);
+                inventoryWindow.refresh(); // Sincroniza a UI imediatamente após ganhar o item!
+                player.setInteracting(true); // Trava movimentação/ataque usando o boolean que você já tem
+                inventoryWindow.setVisible(false);
+                return;
+            }
+            // Se não achou NPC, procura por corpos de inimigos (seu código original de loot)
             Enemy closestCorpse = null;
-            float minDistance = INTERACTION_RANGE;
+            float minCorpseDist = INTERACTION_RANGE;
 
             for (Entity ent : entities) {
                 if (ent instanceof Enemy) {
                     Enemy enemy = (Enemy) ent;
                     if (enemy.hasLootAvailable()) {
                         float dist = Vector2.dst(player.getX(), player.getY(), enemy.getX(), enemy.getY());
-                        if (dist <= minDistance) {
-                            minDistance = dist;
+                        if (dist <= minCorpseDist) {
+                            minCorpseDist = dist;
                             closestCorpse = enemy;
                         }
                     }
@@ -293,7 +368,7 @@ public class GameScreen extends AbstractScreen {
                 activeLootTarget = closestCorpse;
                 lootWindow.updateLoot(activeLootTarget);
                 lootWindow.setVisible(true);
-                inventoryWindow.setVisible(false); // Fecha o inventário para priorizar a tela do loot      
+                inventoryWindow.setVisible(false);     
                 player.setInteracting(true);      
             }
         }
@@ -304,6 +379,7 @@ public class GameScreen extends AbstractScreen {
                 player.getInventory().addItem(stack.getDefinition(), stack.getQuantity());
             }
 
+            inventoryWindow.refresh(); // Sincroniza a UI imediatamente após ganhar o item!
             activeLootTarget.clearLoot();
             lootWindow.setVisible(false);
             activeLootTarget = null;
@@ -376,11 +452,19 @@ public class GameScreen extends AbstractScreen {
             applyCameraViewport(cameraController.getCamera(), width, height);
         }
         if (uiStage != null) {
-            uiStage.getViewport().update(width, height, true);
-            inventoryWindow.setPosition(20, height / 2f, Align.left);
-            if (lootWindow != null) {
-                lootWindow.setPosition(width / 2f, height / 2f + 100, Align.center);
-            }
+        uiStage.getViewport().update(width, height, true);
+        
+        // Atualiza a posição mantendo a mesma ancoragem perfeita ao redimensionar a janela
+        if (inventoryWindow != null) {
+            inventoryWindow.setPosition(20, height / 2f, com.badlogic.gdx.utils.Align.topLeft);
+        }
+        
+        if (lootWindow != null) {
+            lootWindow.setPosition(width / 2f, height / 2f + 100, com.badlogic.gdx.utils.Align.center);
+        }
+    }
+        if (dialogueWindow != null) {
+            dialogueWindow.setPosition(width / 2f, 50, Align.bottom);
         }
     }
 

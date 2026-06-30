@@ -1,120 +1,160 @@
 package com.donos.zebra.ui;
 
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.scenes.scene2d.ui.*;
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.utils.Align;
-import com.donos.zebra.items.Inventory;
-import com.donos.zebra.items.ItemStack;
-import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
+import com.donos.zebra.items.Inventory; 
+import com.donos.zebra.items.ItemDefinition;
 
-/**
- * Componente visual que representa o inventário do jogador em uma grade.
- */
 public class InventoryUI extends Table {
 
-    private final Inventory inventory;
-    private final Skin skin;
+    private final DragAndDrop dragAndDrop;
     private final AssetManager assetManager;
-    private final int slotsPerRow = 5;
-    
-    // Armazenamos os drawables diretamente para não depender do mapa interno da Skin
-    private final Drawable windowBackground;
-    private final Drawable slotBackground;
+    private final Inventory backendInventory;
+    private final Skin skin; // Guardamos uma referência da skin para o ícone de arrasto
 
-    public InventoryUI(Inventory inventory, Skin skin, AssetManager assetManager) {
-        this.inventory = inventory;
+    public InventoryUI(Inventory backendInventory, Skin skin, AssetManager assetManager) {
+        this.backendInventory = backendInventory;
         this.skin = skin;
         this.assetManager = assetManager;
+        this.dragAndDrop = new DragAndDrop();
 
-        // Geramos texturas de fallback seguras e incolores caso a skin falhe
-        this.windowBackground = createColorDrawable(new Color(0.1f, 0.1f, 0.1f, 0.8f));
-        this.slotBackground = createColorDrawable(new Color(0.3f, 0.3f, 0.3f, 1f));
-
-        // Configurações da tabela
-        this.align(Align.center);
-        this.setBackground(windowBackground);
+        // Remove a linha antiga this.setSize(200, 200); se ainda lá estiver.
+        
         this.pad(10);
-        this.setVisible(false); // Começa oculta
+        this.top().left(); // Alinha o conteúdo interno da tabela ao topo esquerdo
+        this.setVisible(false); 
+
+        int totalSlots = 16; 
+        for (int i = 0; i < totalSlots; i++) {
+            InventorySlotActor slotActor = new InventorySlotActor(i, skin, assetManager);
+            configurarDragAndDrop(slotActor);
+
+            // Define um tamanho fixo idêntico ao tamanho da textura criada na Skin (40x40)
+            this.add(slotActor).size(40, 40).pad(2);
+            
+            if ((i + 1) % 4 == 0) {
+                this.row();
+            }
+        }
         
-        refresh();
+        // Força a tabela a calcular o seu tamanho real exato com base nos slots adicionados
+        this.pack(); 
     }
 
-    /**
-     * Sincroniza a interface visual com os dados reais do Inventory.
-     */
     public void refresh() {
-        this.clearChildren(); // Limpa a grade atual
-        
-        ItemStack[] slots = inventory.getSlots();
-
-        for (int i = 0; i < slots.length; i++) {
-            Stack slotStack = createSlot(slots[i]);
-            this.add(slotStack).size(40, 40).pad(2); // Tamanho fixo do slot
-
-            if ((i + 1) % slotsPerRow == 0) {
-                this.row(); // Pula para a próxima linha da grade
+        for (com.badlogic.gdx.scenes.scene2d.Actor actor : this.getChildren()) {
+            if (actor instanceof InventorySlotActor) {
+                InventorySlotActor slotActor = (InventorySlotActor) actor;
+                int index = slotActor.getSlotIndex();
+                
+                com.donos.zebra.items.ItemStack stack = backendInventory.getStackAt(index);
+                
+                if (stack != null) {
+                    slotActor.setItem(stack.getDefinition());
+                } else {
+                    slotActor.setItem(null);
+                }
             }
         }
-        this.pack(); // Ajusta o tamanho da janela ao conteúdo
     }
 
-    /**
-     * Cria um slot individual (Fundo + Ícone + Quantidade).
-     */
-    private Stack createSlot(ItemStack stack) {
-        Stack stackGroup = new Stack();
-        
-        // 1. Fundo do Slot usando o drawable local seguro
-        Image bg = new Image(slotBackground);
-        stackGroup.add(bg);
+    private void configurarDragAndDrop(InventorySlotActor slot) {
+        // --- 1. ORIGEM ---
+        dragAndDrop.addSource(new Source(slot) {
+            @Override
+            public Payload dragStart(InputEvent event, float x, float y, int pointer) {
+                InventorySlotActor actor = (InventorySlotActor) getActor();
+                if (actor.isEmpty()) return null; 
 
-        // 2. Se houver item no slot, adiciona o ícone e a quantidade
-        if (stack != null) {
-            String path = stack.getDefinition().getIconPath();
-            if (assetManager.isLoaded(path)) {
-                Image icon = new Image(assetManager.get(path, Texture.class));
-                stackGroup.add(icon);
+                Payload payload = new Payload();
+                payload.setObject(actor); 
+
+                // Passando a skin para o ator de arrasto renderizar o fundo corretamente
+                InventorySlotActor dragActor = new InventorySlotActor(actor.getSlotIndex(), skin, assetManager);
+                dragActor.setItem(actor.getItem());
+                dragActor.setSize(actor.getWidth(), actor.getHeight());
+                payload.setDragActor(dragActor);
+
+                return payload;
+            }
+        });
+
+        // --- 2. ALVO ---
+        dragAndDrop.addTarget(new Target(slot) {
+            @Override
+            public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
+                return true; 
             }
 
-            if (stack.getQuantity() > 1) {
-                Label qtyLabel = new Label(String.valueOf(stack.getQuantity()), skin);
-                qtyLabel.setAlignment(Align.bottomRight);
-                stackGroup.add(qtyLabel);
+            @Override
+            public void drop(Source source, Payload payload, float x, float y, int pointer) {
+                InventorySlotActor slotOrigem = (InventorySlotActor) payload.getObject();
+                InventorySlotActor slotDestino = (InventorySlotActor) getActor();
+
+                if (slotOrigem.getSlotIndex() == slotDestino.getSlotIndex()) return;
+
+                // 1. Modifica no backend
+                backendInventory.swapSlots(slotOrigem.getSlotIndex(), slotDestino.getSlotIndex());
+
+                // 2. Atualiza a UI
+                refresh();
             }
-        }
-
-        return stackGroup;
+        }); // Chave de fechamento do Target corrigida!
     }
 
     /**
-     * Método auxiliar para criar cores sólidas sem depender da busca da Skin
+     * Método estático para gerar as texturas dos slots via código.
      */
-    private static Drawable createColorDrawable(Color color) {
-        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmap.setColor(color);
-        pixmap.fill();
-        Texture texture = new Texture(pixmap);
-        pixmap.dispose();
-        return new TextureRegionDrawable(texture);
-    }
-
     /**
-     * Cria uma skin básica apenas para gerenciar fontes e estilos de texto.
+     * Método estático para gerar as texturas dos slots e estilos de texto via código.
      */
     public static Skin createDefaultSkin(BitmapFont font) {
         Skin skin = new Skin();
-        skin.add("default", font);
 
-        Label.LabelStyle labelStyle = new Label.LabelStyle();
+        // ---- 1. REGISTRA A FONTE E O ESTILO DE LABEL (TEXTO) ----
+        // Isso resolve o erro da LootUI e DialogueUI que precisam exibir textos!
+        skin.add("default", font);
+        
+        com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle labelStyle = 
+            new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle();
         labelStyle.font = font;
         labelStyle.fontColor = Color.WHITE;
         skin.add("default", labelStyle);
 
+        // ---- 2. ESTILO DOS SLOTS (CÓDIGO QUE JÁ REFEZ) ----
+        // Slot Normal: Fundo escuro com borda cinza
+        Pixmap pixmapNormal = new Pixmap(40, 40, Pixmap.Format.RGBA8888);
+        pixmapNormal.setColor(new Color(0.2f, 0.2f, 0.2f, 0.8f));
+        pixmapNormal.fill();
+        pixmapNormal.setColor(Color.GRAY);
+        pixmapNormal.drawRectangle(0, 0, 40, 40);
+        Texture textureNormal = new Texture(pixmapNormal);
+        pixmapNormal.dispose();
+
+        // Slot Hover: Fundo mais claro com borda branca ao passar o mouse
+        Pixmap pixmapHover = new Pixmap(40, 40, Pixmap.Format.RGBA8888);
+        pixmapHover.setColor(new Color(0.3f, 0.3f, 0.3f, 0.9f));
+        pixmapHover.fill();
+        pixmapHover.setColor(Color.WHITE);
+        pixmapHover.drawRectangle(0, 0, 40, 40);
+        Texture textureHover = new Texture(pixmapHover);
+        pixmapHover.dispose();
+
+        com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle slotStyle = new com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle();
+        slotStyle.up = new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(textureNormal);
+        slotStyle.over = new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(textureHover);
+
+        skin.add("slot-style", slotStyle);
         return skin;
     }
 }

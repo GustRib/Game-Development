@@ -120,11 +120,14 @@
         },
         "prototipo.tmx": {
             "scale": 1.5,
-            "selectedLayer": 0,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 340.33333333333337,
-                "y": 202
+                "x": 54.99999999999997,
+                "y": 69.99999999999997
             }
+        },
+        "prototipo.tmx#Fence's copiar": {
+            "scaleInDock": 1
         },
         "prototipo.tmx#Ground": {
             "scaleInDock": 1,
@@ -134,6 +137,9 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "prototipo.tmx#Objects(1)": {
+            "scaleInDock": 1
+        },
         "prototipo.tmx#Objects_animated": {
             "scaleInDock": 1,
             "scaleInEditor": 1
@@ -141,6 +147,12 @@
         "prototipo.tmx#Pixel 16 v2 village free": {
             "scaleInDock": 1,
             "scaleInEditor": 1
+        },
+        "prototipo.tmx#chest": {
+            "scaleInDock": 1
+        },
+        "prototipo.tmx#free_pixel_16_woods": {
+            "scaleInDock": 1
         },
         "teste.tmx": {
             "scale": 4,

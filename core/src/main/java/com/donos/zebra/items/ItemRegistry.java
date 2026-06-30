@@ -18,6 +18,7 @@ public class ItemRegistry {
     public static final ItemDefinition IRON_ORE;
     public static final ItemDefinition IRON_SWORD;
     public static final ItemDefinition HEALTH_POTION;
+    public static final ItemDefinition STONE_PICKAXE;
 
     // Inicialização do catálogo
     static {
@@ -69,11 +70,23 @@ public class ItemRegistry {
                 "items/health_potion.png"
         );
 
+        STONE_PICKAXE = new ItemDefinition(
+                "stone_pickaxe",
+                "Picareta de Pedra",
+                "Utilizada para minerar Cobre.",
+                ItemType.RESOURCE,
+                1,
+                10,
+                false,
+                "items/stone_pickaxe.png"
+        );
+
         // Registrando todos no mapa interno automaticamente
         register(COPPER_ORE);
         register(IRON_ORE);
         register(IRON_SWORD);
         register(HEALTH_POTION);
+        register(STONE_PICKAXE);
     }
 
     /**

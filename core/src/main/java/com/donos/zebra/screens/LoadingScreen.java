@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.donos.zebra.MainGame;
 import com.donos.zebra.config.GameConfig;
 import com.donos.zebra.entities.PlayerAnimationLoader;
+import com.donos.zebra.entities.MentorAnimationLoader; // Certifique-se de importar ou usar o caminho completo
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.world.LevelLoader;
 
@@ -27,10 +28,15 @@ public class LoadingScreen extends AbstractScreen {
         if (!assetsQueued) {
             // --- CARREGAMENTO DOS ASSETS DE ITENS ---
             game.getAssetManager().load("items/copper_ore.png", Texture.class);
+            game.getAssetManager().load("items/stone_pickaxe.png", Texture.class);
             // game.getAssetManager().load("items/iron_ore.png", Texture.class);
             // game.getAssetManager().load("items/iron_sword.png", Texture.class);
             // game.getAssetManager().load("items/health_potion.png", Texture.class);
 
+            // --- CARREGAMENTO DO MENTOR (Seguro para todos os modos) ---
+            MentorAnimationLoader.queueAssets(game.getAssetManager());
+
+            // --- CARREGAMENTO DOS MAPAS ---
             if (GameConfig.USE_PROCEDURAL_DUNGEON) {
                 PlayerAnimationLoader.queueAssets(game.getAssetManager());
                 LevelLoader.queueTilesetReference(game.getAssetManager(), LevelConstants.MAP_PATH);

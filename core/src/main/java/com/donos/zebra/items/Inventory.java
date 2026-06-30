@@ -146,4 +146,26 @@ public class Inventory {
         }
         System.out.println("=============================");
     }
+
+    /**
+     * Retorna o ItemStack contido em um slot específico, ou null se estiver vazio.
+     */
+    public ItemStack getStackAt(int index) {
+        if (index < 0 || index >= slots.length) return null;
+        return slots[index];
+    }
+
+    /**
+     * Troca fisicamente a posição de dois ItemStacks no array.
+     * Essencial para o funcionamento do sistema Drag and Drop.
+     */
+    public void swapSlots(int indexA, int indexB) {
+        if (indexA < 0 || indexA >= slots.length || indexB < 0 || indexB >= slots.length) {
+            return; // Proteção contra índices inválidos
+        }
+        
+        ItemStack temp = slots[indexA];
+        slots[indexA] = slots[indexB];
+        slots[indexB] = temp;
+    }
 }
