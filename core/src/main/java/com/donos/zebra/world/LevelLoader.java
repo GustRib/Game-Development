@@ -11,8 +11,12 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.entities.PlayerAnimationLoader;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class LevelLoader {
 
@@ -49,6 +53,7 @@ public final class LevelLoader {
         float mentorX = 0f;
         float mentorY = 0f;
         boolean hasMentor = false;
+        List<Vector2> oreNodePositions = new ArrayList<>();
 
         MapLayer spawnLayer = map.getLayers().get(LevelConstants.SPAWN_LAYER);
         if (spawnLayer != null) {
@@ -87,27 +92,27 @@ public final class LevelLoader {
                     + LevelConstants.DEFAULT_SPAWN_X + ", " + LevelConstants.DEFAULT_SPAWN_Y + ").");
             }
 
-            // 2. NOVA LÓGICA: Busca o objeto chamado "Mentor" na mesma camada de Spawns
-            MapObject mentorObj = spawnObjects.get("Mentor");
-            if (mentorObj != null) {
-                Float mx = null;
-                Float my = null;
-
-                if (mentorObj instanceof RectangleMapObject) {
-                    Rectangle r = ((RectangleMapObject) mentorObj).getRectangle();
-                    mx = r.x + r.width / 2f;
-                    my = r.y + r.height / 2f;
-                } else {
-                    MapProperties p = mentorObj.getProperties();
-                    mx = p.get("x", Float.class);
-                    my = p.get("y", Float.class);
+            // 2. Mentor + ore nodes on the same spawn layer
+            for (MapObject object : spawnObjects) {
+                String name = object.getName();
+                if (name == null) {
+                    continue;
                 }
 
-                if (mx != null && my != null) {
-                    mentorX = mx;
-                    mentorY = my;
-                    hasMentor = true;
-                    Gdx.app.log("SPAWN", "Mentor detectado no Tiled em: " + mentorX + ", " + mentorY);
+                if ("Mentor".equals(name)) {
+                    float[] pos = readObjectCenter(object);
+                    if (pos != null) {
+                        mentorX = pos[0];
+                        mentorY = pos[1];
+                        hasMentor = true;
+                        Gdx.app.log("SPAWN", "Mentor detectado no Tiled em: " + mentorX + ", " + mentorY);
+                    }
+                } else if (name.startsWith(OpeningQuest.ORE_NODE_OBJECT_PREFIX)) {
+                    float[] pos = readObjectCenter(object);
+                    if (pos != null) {
+                        oreNodePositions.add(new Vector2(pos[0], pos[1]));
+                        Gdx.app.log("SPAWN", "OreNode detectado em: " + pos[0] + ", " + pos[1]);
+                    }
                 }
             }
         } else {
@@ -132,8 +137,22 @@ public final class LevelLoader {
 
         Array<Polygon> collisionPolygons = buildCollisionPolygons(collisionRects);
         
-        // Retorna o LevelData passando os 3 novos parâmetros do Mentor no final
-        return new LevelData(map, spawnX, spawnY, collisionRects, collisionPolygons, mentorX, mentorY, hasMentor);
+        return new LevelData(map, spawnX, spawnY, collisionRects, collisionPolygons,
+            mentorX, mentorY, hasMentor, oreNodePositions);
+    }
+
+    private static float[] readObjectCenter(MapObject object) {
+        if (object instanceof RectangleMapObject) {
+            Rectangle r = ((RectangleMapObject) object).getRectangle();
+            return new float[]{r.x + r.width / 2f, r.y + r.height / 2f};
+        }
+        MapProperties p = object.getProperties();
+        Float x = p.get("x", Float.class);
+        Float y = p.get("y", Float.class);
+        if (x == null || y == null) {
+            return null;
+        }
+        return new float[]{x, y};
     }
 
     private static Array<Polygon> buildCollisionPolygons(Array<Rectangle> rects) {

@@ -51,6 +51,7 @@ public class Player implements Entity {
     // --- SISTEMA DE ITENS ---
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
     private boolean isInteracting = false;                  // Trava o jogador na tela de loot
+    private boolean hasFirstSword = false;
 
     public Player() {
         this(new PlayerInput());
@@ -300,5 +301,13 @@ public class Player implements Entity {
      */
     public boolean isInteracting() {
         return isInteracting;
+    }
+
+    public boolean hasFirstSword() {
+        return hasFirstSword;
+    }
+
+    public void grantFirstSword() {
+        this.hasFirstSword = true;
     }
 }

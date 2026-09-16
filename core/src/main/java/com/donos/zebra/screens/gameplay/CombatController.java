@@ -58,6 +58,12 @@ public final class CombatController {
             return;
         }
 
+        if (!player.hasFirstSword()) {
+            damageTexts.add(new DamageText(
+                player.getX(), player.getY() + 18f, "Precisa de uma arma!", Color.YELLOW));
+            return;
+        }
+
         for (int i = entities.size() - 1; i >= 0; i--) {
             Entity ent = entities.get(i);
             if (ent instanceof Enemy && !ent.isDead()) {

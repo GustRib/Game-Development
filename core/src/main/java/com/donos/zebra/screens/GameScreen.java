@@ -102,6 +102,7 @@ public class GameScreen extends AbstractScreen {
         player.setPosition(initialSpawnX, initialSpawnY);
 
         entities.clear();
+        interactables.clear();
         entities.add(player);
         damageTexts.clear();
 
@@ -130,6 +131,7 @@ public class GameScreen extends AbstractScreen {
         uiStage.addActor(dialogueWindow);
 
         LevelPopulator.addMentor(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        LevelPopulator.addOreNodes(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
         LevelPopulator.addOrcs(
             proceduralMap, dungeonMap, initialSpawnX, initialSpawnY, game.getAssetManager(), entities);
 

@@ -1,6 +1,7 @@
 package com.donos.zebra.screens.gameplay;
 
 import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
@@ -9,6 +10,8 @@ import com.donos.zebra.entities.MentorAnimationLoader;
 import com.donos.zebra.entities.MentorNpc;
 import com.donos.zebra.entities.Orc;
 import com.donos.zebra.entities.OrcAnimationLoader;
+import com.donos.zebra.entities.OreNode;
+import com.donos.zebra.items.ItemRegistry;
 import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.world.LevelData;
 import com.donos.zebra.world.dungeon.DungeonMap;
@@ -89,6 +92,23 @@ public final class LevelPopulator {
 
         for (Vector2 spawn : resolveOrcSpawns(proceduralMap, dungeonMap, playerSpawnX, playerSpawnY)) {
             entities.add(new Orc(spawn.x, spawn.y, orcAnims));
+        }
+    }
+
+    public static void addOreNodes(LevelData levelData,
+                                   DialogueUI dialogueWindow,
+                                   AssetManager assetManager,
+                                   List<Interactable> interactables,
+                                   List<? super OreNode> entities) {
+        if (levelData.oreNodePositions.isEmpty()) {
+            return;
+        }
+
+        Texture oreTexture = assetManager.get(ItemRegistry.COPPER_ORE.getIconPath(), Texture.class);
+        for (Vector2 pos : levelData.oreNodePositions) {
+            OreNode node = new OreNode(pos.x, pos.y, oreTexture, dialogueWindow);
+            interactables.add(node);
+            entities.add(node);
         }
     }
 }

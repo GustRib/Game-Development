@@ -37,11 +37,13 @@ class AssetQueueOwnershipTest {
 
         assertTrue(unique.contains("items/copper_ore.png"));
         assertTrue(unique.contains("items/stone_pickaxe.png"));
+        assertTrue(unique.contains("items/iron_sword.png"));
         assertTrue(unique.contains(AnimationConstants.IDLE_SHEET_PATH));
         assertTrue(unique.contains(OrcAnimationLoader.ORC_MASTER_PATH));
         assertTrue(unique.contains(LevelConstants.MAP_PATH));
 
         verify(assetManager).load(eq(LevelConstants.MAP_PATH), eq(TiledMap.class));
         verify(assetManager).load(eq("items/copper_ore.png"), eq(Texture.class));
+        verify(assetManager).load(eq("items/iron_sword.png"), eq(Texture.class));
     }
 }

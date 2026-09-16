@@ -46,7 +46,7 @@ public class ItemRegistry {
                 "items/iron_ore.png"
         );
 
-        // 3. Espada de Ferro (Arma não empilhável, valor alto)
+        // 3. Espada de Ferro (placeholder icon: copied copper_ore art until dedicated sword icon exists)
         IRON_SWORD = new ItemDefinition(
                 "iron_sword",
                 "Espada de Ferro",

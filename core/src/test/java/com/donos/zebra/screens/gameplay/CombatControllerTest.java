@@ -25,6 +25,7 @@ class CombatControllerTest {
         input.pressAttack();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.setPosition(100f, 100f);
+        player.grantFirstSword();
         player.update(0.016f, new Array<>());
         assertEquals(AnimationConstants.ANIM_ATTACK, player.getCurrentAnimationKey());
 
@@ -43,11 +44,34 @@ class CombatControllerTest {
     }
 
     @Test
+    void meleeWithoutSwordDoesNotDealDamage() {
+        StubPlayerInput input = new StubPlayerInput();
+        input.pressAttack();
+        Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
+        player.setPosition(100f, 100f);
+        player.update(0.016f, new Array<>());
+        assertFalse(player.hasFirstSword());
+
+        Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
+        List<Entity> entities = new ArrayList<>();
+        entities.add(orc);
+        List<DamageText> damageTexts = new ArrayList<>();
+
+        float orcHealthBefore = orc.getCurrentHealth();
+        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+
+        assertEquals(orcHealthBefore, orc.getCurrentHealth(), 0.01f);
+        assertEquals(1, damageTexts.size());
+        assertTrue(damageTexts.get(0).text.contains("arma"));
+    }
+
+    @Test
     void meleeDoesNotHitEnemyOutOfRange() {
         StubPlayerInput input = new StubPlayerInput();
         input.pressAttack();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.setPosition(100f, 100f);
+        player.grantFirstSword();
         player.update(0.016f, new Array<>());
 
         Orc orc = new Orc(200f, 100f, TestAnimationFactory.createOrcAnimations());
@@ -68,6 +92,7 @@ class CombatControllerTest {
         input.pressAttack();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.setPosition(100f, 100f);
+        player.grantFirstSword();
         player.update(0.016f, new Array<>());
 
         Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());

@@ -30,6 +30,13 @@ class LevelLoaderParsingTest extends HeadlessTestBase {
         RectangleMapObject mentor = new RectangleMapObject(140f, 80f, 16f, 16f);
         mentor.setName("Mentor");
         spawnLayer.getObjects().add(mentor);
+
+        RectangleMapObject ore1 = new RectangleMapObject(168f, 248f, 16f, 16f);
+        ore1.setName("OreNode1");
+        spawnLayer.getObjects().add(ore1);
+        RectangleMapObject ore2 = new RectangleMapObject(200f, 272f, 16f, 16f);
+        ore2.setName("OreNode2");
+        spawnLayer.getObjects().add(ore2);
         map.getLayers().add(spawnLayer);
 
         MapLayer collisionLayer = new MapLayer();
@@ -45,6 +52,9 @@ class LevelLoaderParsingTest extends HeadlessTestBase {
         assertTrue(levelData.hasMentor);
         assertEquals(148f, levelData.mentorX, 0.01f);
         assertEquals(88f, levelData.mentorY, 0.01f);
+        assertEquals(2, levelData.oreNodePositions.size());
+        assertEquals(176f, levelData.oreNodePositions.get(0).x, 0.01f);
+        assertEquals(256f, levelData.oreNodePositions.get(0).y, 0.01f);
         assertEquals(2, levelData.collisionRects.size);
         assertFalse(levelData.collisionPolygons.isEmpty());
         for (Polygon polygon : levelData.collisionPolygons) {
@@ -60,6 +70,7 @@ class LevelLoaderParsingTest extends HeadlessTestBase {
         assertEquals(LevelConstants.DEFAULT_SPAWN_X, levelData.spawnX, 0.01f);
         assertEquals(LevelConstants.DEFAULT_SPAWN_Y, levelData.spawnY, 0.01f);
         assertFalse(levelData.hasMentor);
+        assertTrue(levelData.oreNodePositions.isEmpty());
         assertTrue(levelData.collisionPolygons.isEmpty());
     }
 }
