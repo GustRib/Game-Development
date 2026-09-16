@@ -5,8 +5,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.donos.zebra.MainGame;
 import com.donos.zebra.config.GameConfig;
+import com.donos.zebra.entities.MentorAnimationLoader;
+import com.donos.zebra.entities.OrcAnimationLoader;
 import com.donos.zebra.entities.PlayerAnimationLoader;
-import com.donos.zebra.entities.MentorAnimationLoader; // Certifique-se de importar ou usar o caminho completo
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.world.LevelLoader;
 
@@ -26,24 +27,31 @@ public class LoadingScreen extends AbstractScreen {
     @Override
     public void show() {
         if (!assetsQueued) {
-            // --- CARREGAMENTO DOS ASSETS DE ITENS ---
-            game.getAssetManager().load("items/copper_ore.png", Texture.class);
-            game.getAssetManager().load("items/stone_pickaxe.png", Texture.class);
-            // game.getAssetManager().load("items/iron_ore.png", Texture.class);
-            // game.getAssetManager().load("items/iron_sword.png", Texture.class);
-            // game.getAssetManager().load("items/health_potion.png", Texture.class);
-
-            // --- CARREGAMENTO DO MENTOR (Seguro para todos os modos) ---
-            MentorAnimationLoader.queueAssets(game.getAssetManager());
-
-            // --- CARREGAMENTO DOS MAPAS ---
-            if (GameConfig.USE_PROCEDURAL_DUNGEON) {
-                PlayerAnimationLoader.queueAssets(game.getAssetManager());
-                LevelLoader.queueTilesetReference(game.getAssetManager(), LevelConstants.MAP_PATH);
-            } else {
-                LevelLoader.queueAssets(game.getAssetManager(), LevelConstants.MAP_PATH);
-            }
+            queueGameplayAssets();
             assetsQueued = true;
+        }
+    }
+
+    private void queueGameplayAssets() {
+        queueGameplayAssets(game.getAssetManager(), GameConfig.USE_PROCEDURAL_DUNGEON);
+    }
+
+    /**
+     * Single owner of gameplay AssetManager queues. Used by LoadingScreen and tests.
+     */
+    public static void queueGameplayAssets(com.badlogic.gdx.assets.AssetManager assetManager,
+                                           boolean proceduralDungeon) {
+        assetManager.load("items/copper_ore.png", Texture.class);
+        assetManager.load("items/stone_pickaxe.png", Texture.class);
+
+        MentorAnimationLoader.queueAssets(assetManager);
+        PlayerAnimationLoader.queueAssets(assetManager);
+        OrcAnimationLoader.queueAssets(assetManager);
+
+        if (proceduralDungeon) {
+            LevelLoader.queueTilesetReference(assetManager, LevelConstants.MAP_PATH);
+        } else {
+            assetManager.load(LevelConstants.MAP_PATH, com.badlogic.gdx.maps.tiled.TiledMap.class);
         }
     }
 

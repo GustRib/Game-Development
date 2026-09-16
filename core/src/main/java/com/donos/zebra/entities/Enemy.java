@@ -1,7 +1,11 @@
 package com.donos.zebra.entities;
 
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.items.ItemStack;
+import com.donos.zebra.util.CollisionMovement;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,13 +14,18 @@ public abstract class Enemy implements Entity {
     protected float maxHealth;
     protected float currentHealth;
     protected boolean isDead = false;
-    
+
     //Controle de Loot e Estado de Saque
     protected boolean isLooted = false;
     protected final List<ItemStack> lootTable = new ArrayList<>();
 
     protected float speed;
     protected float aggroRange;
+
+    private final Polygon scratchX = new Polygon();
+    private final Polygon scratchY = new Polygon();
+    private final float[] moveScratch = new float[2];
+    private float[] hitboxLocalVertices;
 
     public Enemy(float x, float y, float maxHealth, float speed, float aggroRange) {
         this.x = x;
@@ -27,17 +36,21 @@ public abstract class Enemy implements Entity {
         this.aggroRange = aggroRange;
     }
 
+    protected void setHitboxLocalVertices(float[] localVertices) {
+        this.hitboxLocalVertices = localVertices.clone();
+    }
+
     // IA Simples para seguir o jogador na sua direção
-    protected void chasePlayer(Player player, float delta) {
+    protected void chasePlayer(Player player, float delta, Array<Polygon> collisionPolygons) {
         if (isDead || player.isDead()) return;
 
         float distance = Vector2.dst(this.x, this.y, player.getX(), player.getY());
-        
+
         // Persegue se estiver no alcance de detecção, mas não colado demais
-        if (distance <= aggroRange && distance > 8f) { 
+        if (distance <= aggroRange && distance > 8f) {
             float dirX = player.getX() - this.x;
             float dirY = player.getY() - this.y;
-            
+
             // Normaliza o vetor para manter a velocidade uniforme em qualquer ângulo
             float length = (float) Math.sqrt(dirX * dirX + dirY * dirY);
             if (length > 0) {
@@ -45,10 +58,30 @@ public abstract class Enemy implements Entity {
                 dirY /= length;
             }
 
-            // Atualiza a posição do monstro
-            this.x += dirX * speed * delta;
-            this.y += dirY * speed * delta;
-            
+            float dx = dirX * speed * delta;
+            float dy = dirY * speed * delta;
+
+            if (hitboxLocalVertices != null) {
+                moveScratch[0] = x;
+                moveScratch[1] = y;
+                CollisionMovement.tryMove(
+                    moveScratch,
+                    0f,
+                    0f,
+                    hitboxLocalVertices,
+                    dx,
+                    dy,
+                    collisionPolygons,
+                    scratchX,
+                    scratchY
+                );
+                this.x = moveScratch[0];
+                this.y = moveScratch[1];
+            } else {
+                this.x += dx;
+                this.y += dy;
+            }
+
             if (getHitbox() != null) {
                 getHitbox().setPosition(this.x, this.y);
             }
@@ -111,7 +144,7 @@ public abstract class Enemy implements Entity {
     @Override
     public float getCurrentHealth() { return currentHealth; }
 
-    public float getMaxHealth() { 
-        return maxHealth; 
+    public float getMaxHealth() {
+        return maxHealth;
     }
 }

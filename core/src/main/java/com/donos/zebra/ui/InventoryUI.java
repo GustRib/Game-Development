@@ -27,8 +27,6 @@ public class InventoryUI extends Table {
         this.skin = skin;
         this.assetManager = assetManager;
         this.dragAndDrop = new DragAndDrop();
-
-        // Remove a linha antiga this.setSize(200, 200); se ainda lá estiver.
         
         this.pad(10);
         this.top().left(); // Alinha o conteúdo interno da tabela ao topo esquerdo

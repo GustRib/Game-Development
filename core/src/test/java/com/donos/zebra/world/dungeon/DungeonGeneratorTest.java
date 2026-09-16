@@ -3,6 +3,12 @@ package com.donos.zebra.world.dungeon;
 import com.donos.zebra.config.DungeonGenerationConfig;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayDeque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -62,5 +68,66 @@ class DungeonGeneratorTest {
         ));
 
         assertNotEquals(first.getSpawnX(), second.getSpawnX(), 0.001f);
+    }
+
+    @Test
+    void roomsDoNotOverlap() {
+        DungeonMap map = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
+        List<Room> rooms = map.getRooms();
+        for (int i = 0; i < rooms.size(); i++) {
+            for (int j = i + 1; j < rooms.size(); j++) {
+                assertFalse(rooms.get(i).overlaps(rooms.get(j), 0),
+                    "Rooms " + i + " and " + j + " should not overlap");
+            }
+        }
+    }
+
+    @Test
+    void spawnReachabilityCoversMajorityOfFloorTiles() {
+        DungeonMap map = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
+        int spawnTileX = (int) (map.getSpawnX() / map.getTileSize());
+        int spawnTileY = (int) (map.getSpawnY() / map.getTileSize());
+
+        int floorCount = 0;
+        for (int y = 0; y < map.getHeight(); y++) {
+            for (int x = 0; x < map.getWidth(); x++) {
+                if (map.isWalkable(x, y)) {
+                    floorCount++;
+                }
+            }
+        }
+
+        int reachable = countReachableFloor(map, spawnTileX, spawnTileY);
+        assertTrue(reachable > 0);
+        // Sequential L-corridors connect rooms; expect most floor reachable from spawn
+        assertTrue(reachable >= floorCount * 0.8f,
+            "Expected most floor tiles reachable; reachable=" + reachable + " floor=" + floorCount);
+    }
+
+    private static int countReachableFloor(DungeonMap map, int startX, int startY) {
+        Queue<long[]> queue = new ArrayDeque<>();
+        Set<Long> visited = new HashSet<>();
+        long startKey = (((long) startX) << 32) | (startY & 0xffffffffL);
+        queue.add(new long[]{startX, startY});
+        visited.add(startKey);
+
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        while (!queue.isEmpty()) {
+            long[] cur = queue.poll();
+            int cx = (int) cur[0];
+            int cy = (int) cur[1];
+            for (int[] d : dirs) {
+                int nx = cx + d[0];
+                int ny = cy + d[1];
+                if (!map.isWalkable(nx, ny)) {
+                    continue;
+                }
+                long key = (((long) nx) << 32) | (ny & 0xffffffffL);
+                if (visited.add(key)) {
+                    queue.add(new long[]{nx, ny});
+                }
+            }
+        }
+        return visited.size();
     }
 }

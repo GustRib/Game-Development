@@ -120,10 +120,10 @@
         },
         "prototipo.tmx": {
             "scale": 1.5,
-            "selectedLayer": 3,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 54.99999999999997,
-                "y": 69.99999999999997
+                "x": 223,
+                "y": 69.66666666666666
             }
         },
         "prototipo.tmx#Fence's copiar": {

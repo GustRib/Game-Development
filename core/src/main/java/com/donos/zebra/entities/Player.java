@@ -4,12 +4,12 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.items.Inventory;
+import com.donos.zebra.util.CollisionMovement;
 
 import java.util.Map;
 
@@ -46,6 +46,7 @@ public class Player implements Entity {
     private float[] hitboxLocalVertices;
     private final Polygon scratchX = new Polygon();
     private final Polygon scratchY = new Polygon();
+    private final float[] moveScratch = new float[2];
 
     // --- SISTEMA DE ITENS ---
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
@@ -63,7 +64,7 @@ public class Player implements Entity {
         this(input, PlayerAnimationLoader.loadAnimations());
     }
 
-    Player(PlayerInput input, Map<String, Animation<TextureRegion>[]> animations) {
+    public Player(PlayerInput input, Map<String, Animation<TextureRegion>[]> animations) {
         this.input = input;
         this.animations = animations;
         initState();
@@ -169,37 +170,21 @@ public class Player implements Entity {
     }
 
     void move(float dx, float dy, Array<Polygon> collisionPolygons) {
-        if ((dx == 0f && dy == 0f) || collisionPolygons == null) return;
-
-        float hitboxX = x + HITBOX_OFFSET_X;
-        float hitboxY = y + HITBOX_OFFSET_Y;
-
-        if (dx != 0f) {
-            scratchX.setVertices(hitboxLocalVertices);
-            scratchX.setPosition(hitboxX + dx, hitboxY);
-            boolean collX = false;
-            for (Polygon p : collisionPolygons) {
-                if (Intersector.overlapConvexPolygons(scratchX, p)) {
-                    collX = true;
-                    break;
-                }
-            }
-            if (!collX) x += dx;
-        }
-
-        if (dy != 0f) {
-            scratchY.setVertices(hitboxLocalVertices);
-            scratchY.setPosition(x + HITBOX_OFFSET_X, hitboxY + dy);
-            boolean collY = false;
-            for (Polygon p : collisionPolygons) {
-                if (Intersector.overlapConvexPolygons(scratchY, p)) {
-                    collY = true;
-                    break;
-                }
-            }
-            if (!collY) y += dy;
-        }
-
+        moveScratch[0] = x;
+        moveScratch[1] = y;
+        CollisionMovement.tryMove(
+            moveScratch,
+            HITBOX_OFFSET_X,
+            HITBOX_OFFSET_Y,
+            hitboxLocalVertices,
+            dx,
+            dy,
+            collisionPolygons,
+            scratchX,
+            scratchY
+        );
+        x = moveScratch[0];
+        y = moveScratch[1];
         syncHitboxPosition();
     }
 

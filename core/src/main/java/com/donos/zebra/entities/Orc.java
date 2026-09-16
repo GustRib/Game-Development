@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.items.ItemRegistry;
 import com.donos.zebra.items.ItemStack;
 
@@ -38,6 +39,7 @@ public class Orc extends Enemy {
         float[] vertices = { -5f, -6f, 5f, -6f, 5f, 6f, -5f, 6f };
         this.hitbox = new Polygon(vertices);
         this.hitbox.setPosition(x, y);
+        setHitboxLocalVertices(vertices);
 
         // ADICIONAR LOOT FIXO NO SPAWN ---
         // Adiciona exatamente 3 unidades de Minério de Cobre para testes(remover depois)
@@ -45,6 +47,10 @@ public class Orc extends Enemy {
     }
 
     public void updateEnemy(Player player, float delta) {
+        updateEnemy(player, delta, null);
+    }
+
+    public void updateEnemy(Player player, float delta, Array<Polygon> collisionPolygons) {
         stateTime += delta;
 
         if (isDead) {
@@ -74,7 +80,7 @@ public class Orc extends Enemy {
 
         // O Orc FICA PARADO enquanto estiver desferindo o golpe (attackVisualTimer > 0)
         if (!player.isDead() && attackVisualTimer <= 0) {
-            chasePlayer(player, delta);
+            chasePlayer(player, delta, collisionPolygons);
         }
 
         float dx = this.x - oldX;

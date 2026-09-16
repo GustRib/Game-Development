@@ -25,12 +25,7 @@ public class MainGame extends Game {
             new TmxMapLoader(new InternalFileHandleResolver())
         );
 
-        // Enfileira os assets corretos
-        PlayerAnimationLoader.queueAssets(assetManager);
-        OrcAnimationLoader.queueAssets(assetManager); // Agora vai enfileirar apenas o Orc.png
-        
-        assetManager.finishLoading(); 
-
+        // Gameplay assets are queued exclusively by LoadingScreen.
         setScreen(new MainMenuScreen(this));
     }
 
