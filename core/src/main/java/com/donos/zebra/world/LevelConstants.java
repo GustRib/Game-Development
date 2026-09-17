@@ -3,6 +3,7 @@ package com.donos.zebra.world;
 public final class LevelConstants {
 
     public static final String MAP_PATH = "maps/prototipo.tmx";
+    public static final String TAVERN_BACKGROUND = "maps/Tavern_01.png";
 
     /**
      * walls_floor tileset (firstgid=377, columns=17).

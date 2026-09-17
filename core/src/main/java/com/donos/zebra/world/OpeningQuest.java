@@ -20,6 +20,12 @@ public final class OpeningQuest {
 
     public static final String CRAFTING_STATION_OBJECT = "CraftingStation";
 
+    /** Outdoor door into the first house / tavern interior. */
+    public static final String DOOR_HOUSE_OBJECT = "DoorHouse";
+
+    /** Exit door back to the overworld (placed on interior spawn layer). */
+    public static final String DOOR_EXIT_OBJECT = "DoorExit";
+
     private OpeningQuest() {
     }
 

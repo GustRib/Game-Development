@@ -47,7 +47,9 @@ public class LoadingScreen extends AbstractScreen {
         assetManager.load("items/copper_sword.png", Texture.class);
         assetManager.load("items/copper_helmet.png", Texture.class);
         assetManager.load("items/copper_chestplate.png", Texture.class);
+        assetManager.load("items/copper_gloves.png", Texture.class);
         assetManager.load("items/copper_boots.png", Texture.class);
+        assetManager.load(LevelConstants.TAVERN_BACKGROUND, Texture.class);
 
         MentorAnimationLoader.queueAssets(assetManager);
         PlayerAnimationLoader.queueAssets(assetManager);

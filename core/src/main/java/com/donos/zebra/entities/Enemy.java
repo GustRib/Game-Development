@@ -18,6 +18,8 @@ public abstract class Enemy implements Entity {
     //Controle de Loot e Estado de Saque
     protected boolean isLooted = false;
     protected final List<ItemStack> lootTable = new ArrayList<>();
+    /** Nearest lootable corpse highlight (set by GameScreen each frame). */
+    private boolean interactionHighlighted;
 
     protected float speed;
     protected float aggroRange;
@@ -130,6 +132,14 @@ public abstract class Enemy implements Entity {
      */
     public boolean isLooted() {
         return isLooted;
+    }
+
+    public void setInteractionHighlighted(boolean highlighted) {
+        this.interactionHighlighted = highlighted;
+    }
+
+    public boolean isInteractionHighlighted() {
+        return interactionHighlighted;
     }
 
     @Override

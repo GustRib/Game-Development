@@ -1,37 +1,56 @@
 package com.donos.zebra.entities;
 
 import java.util.Map;
+import java.util.Random;
+
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.utils.Array;
-import com.donos.zebra.items.ItemRegistry;
-import com.donos.zebra.items.ItemStack;
+import com.donos.zebra.items.OrcLootRolls;
 
 public class Orc extends Enemy {
+
+    public static final float RESPAWN_SECONDS = 60f;
+
+    private static final Random SHARED_LOOT_RANDOM = new Random();
+
     private final Map<String, Animation<TextureRegion>[]> animations;
+    private final float spawnX;
+    private final float spawnY;
+    private final Random lootRandom;
     private Animation<TextureRegion>[] currentAnimation;
     private float stateTime = 0f;
     private Direction facingDirection = Direction.DOWN;
     private Polygon hitbox;
 
-    // Controladores de estado visual
     private float hurtTimer = 0f;
-    private static final float HURT_DURATION = 0.4f; // Tempo que ele pisca em vermelho
+    private static final float HURT_DURATION = 0.4f;
 
     private float attackCooldownTimer = 0f;
-    private static final float ATTACK_COOLDOWN = 1.5f; // Ele bate a cada 1.5 segundos
-    
-    private static final float ATTACK_RANGE = 24f; 
-    
+    private static final float ATTACK_COOLDOWN = 1.5f;
+
+    private static final float ATTACK_RANGE = 24f;
+
     private float attackVisualTimer = 0f;
-    private static final float ATTACK_ANIM_DURATION = 0.6f; // Tempo total dos 6 frames de ataque (6 * 0.1s)
+    private static final float ATTACK_ANIM_DURATION = 0.6f;
+
+    private float deathTimer;
+    private float highlightPulseTime;
 
     public Orc(float x, float y, Map<String, Animation<TextureRegion>[]> orcAnimations) {
+        this(x, y, orcAnimations, SHARED_LOOT_RANDOM);
+    }
+
+    public Orc(float x, float y, Map<String, Animation<TextureRegion>[]> orcAnimations, Random lootRandom) {
         super(x, y, 40f, 35f, 100f);
+        this.spawnX = x;
+        this.spawnY = y;
         this.animations = orcAnimations;
-        
+        this.lootRandom = lootRandom != null ? lootRandom : SHARED_LOOT_RANDOM;
+
         if (animations != null && animations.containsKey(AnimationConstants.ANIM_IDLE)) {
             this.currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
         }
@@ -41,9 +60,19 @@ public class Orc extends Enemy {
         this.hitbox.setPosition(x, y);
         setHitboxLocalVertices(vertices);
 
-        // Mining yields copper; combat yields iron (plus a trickle of copper) so crafts need both loops.
-        this.lootTable.add(new ItemStack(ItemRegistry.COPPER_ORE, 1));
-        this.lootTable.add(new ItemStack(ItemRegistry.IRON_ORE, 2));
+        OrcLootRolls.fillDefaultOrcLoot(this.lootTable, this.lootRandom);
+    }
+
+    public float getDeathTimer() {
+        return deathTimer;
+    }
+
+    public float getSpawnX() {
+        return spawnX;
+    }
+
+    public float getSpawnY() {
+        return spawnY;
     }
 
     public void updateEnemy(Player player, float delta) {
@@ -53,24 +82,32 @@ public class Orc extends Enemy {
     public void updateEnemy(Player player, float delta, Array<Polygon> collisionPolygons) {
         stateTime += delta;
 
+        if (isInteractionHighlighted() && isDead && hasLootAvailable()) {
+            highlightPulseTime += delta;
+        } else {
+            highlightPulseTime = 0f;
+        }
+
         if (isDead) {
             if (currentAnimation != animations.get("death")) {
                 currentAnimation = animations.get("death");
                 stateTime = 0f;
             }
-            return; // Bloqueia a IA, movimento e ataques. O corpo fica estático no chão pronto para ser looteado.
+            deathTimer += delta;
+            if (deathTimer >= RESPAWN_SECONDS) {
+                respawn();
+            }
+            return;
         }
 
         if (hurtTimer > 0) {
             hurtTimer -= delta;
         }
 
-        // Atualiza o tempo restante da animação do golpe
         if (attackVisualTimer > 0) {
             attackVisualTimer -= delta;
         }
 
-        // Diminui o tempo de espera do ataque
         if (attackCooldownTimer > 0) {
             attackCooldownTimer -= delta;
         }
@@ -78,7 +115,6 @@ public class Orc extends Enemy {
         float oldX = this.x;
         float oldY = this.y;
 
-        // O Orc FICA PARADO enquanto estiver desferindo o golpe (attackVisualTimer > 0)
         if (!player.isDead() && attackVisualTimer <= 0) {
             chasePlayer(player, delta, collisionPolygons);
         }
@@ -87,22 +123,19 @@ public class Orc extends Enemy {
         float dy = this.y - oldY;
         boolean moving = (dx != 0 || dy != 0);
 
-        // Lógica de ataque: Se estiver perto e o cooldown zerou, o orc inicia o ataque!
         float distanceToPlayer = com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());
-            
+
         if (!player.isDead() && distanceToPlayer <= ATTACK_RANGE && attackCooldownTimer <= 0) {
             attackCooldownTimer = ATTACK_COOLDOWN;
-            attackVisualTimer = ATTACK_ANIM_DURATION; // Ativa a janela de tempo da animação
-            player.takeDamage(15f); // Orc arranca 15 de vida
-            this.stateTime = 0f; // Reinicia para tocar o frame de ataque do começo
+            attackVisualTimer = ATTACK_ANIM_DURATION;
+            player.takeDamage(15f);
+            this.stateTime = 0f;
         }
 
-        // Define qual animação usar com base no estado atual
         if (animations != null) {
             if (hurtTimer > 0 && animations.containsKey("hurt")) {
                 this.currentAnimation = animations.get("hurt");
             } else if (attackVisualTimer > 0 && animations.containsKey(AnimationConstants.ANIM_ATTACK)) {
-                // Mantém a animação de ataque ativa enquanto o cronômetro visual não zerar!
                 this.currentAnimation = animations.get(AnimationConstants.ANIM_ATTACK);
             } else if (moving) {
                 if (Math.abs(dx) > Math.abs(dy)) {
@@ -110,26 +143,50 @@ public class Orc extends Enemy {
                 } else {
                     facingDirection = dy > 0 ? Direction.UP : Direction.DOWN;
                 }
-                this.currentAnimation = animations.get(AnimationConstants.ANIM_RUN); 
+                this.currentAnimation = animations.get(AnimationConstants.ANIM_RUN);
             } else {
                 this.currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
             }
         }
     }
 
+    void respawn() {
+        isDead = false;
+        currentHealth = maxHealth;
+        isLooted = false;
+        deathTimer = 0f;
+        x = spawnX;
+        y = spawnY;
+        hitbox.setPosition(x, y);
+        stateTime = 0f;
+        hurtTimer = 0f;
+        attackVisualTimer = 0f;
+        attackCooldownTimer = 0f;
+        highlightPulseTime = 0f;
+        setInteractionHighlighted(false);
+        if (animations != null && animations.containsKey(AnimationConstants.ANIM_IDLE)) {
+            currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
+        }
+        OrcLootRolls.fillDefaultOrcLoot(lootTable, lootRandom);
+    }
+
     @Override
     public void takeDamage(float amount) {
+        boolean wasAlive = !isDead;
         super.takeDamage(amount);
-        // Ativa o visual de dano apenas se ele sobreviver ao golpe
+        if (wasAlive && isDead) {
+            deathTimer = 0f;
+        }
         if (!isDead) {
             this.hurtTimer = HURT_DURATION;
-            this.stateTime = 0f; // Reinicia para ver a animação do dano desde o começo
-            this.attackVisualTimer = 0f; // Interrompe o ataque se ele tomar um golpe (opcional)
+            this.stateTime = 0f;
+            this.attackVisualTimer = 0f;
         }
     }
 
     @Override
-    public void update(float delta) {}
+    public void update(float delta) {
+    }
 
     @Override
     public void render(SpriteBatch batch) {
@@ -137,26 +194,33 @@ public class Orc extends Enemy {
 
         int dirIndex = facingDirection.ordinal();
         if (dirIndex >= currentAnimation.length) {
-            dirIndex = 0; 
+            dirIndex = 0;
         }
 
-        // Não loopamos animações de Morte, Dano ou Ataque para não ficarem repetindo loucamente
-        boolean looping = !isDead && 
-                            (currentAnimation != animations.get("hurt")) && 
-                            (currentAnimation != animations.get(AnimationConstants.ANIM_ATTACK));
-                        
+        boolean looping = !isDead
+            && (currentAnimation != animations.get("hurt"))
+            && (currentAnimation != animations.get(AnimationConstants.ANIM_ATTACK));
+
         TextureRegion currentFrame = currentAnimation[dirIndex].getKeyFrame(stateTime, looping);
 
+        if (isDead && isInteractionHighlighted() && hasLootAvailable()) {
+            float pulse = 0.75f + 0.25f * (float) Math.sin(highlightPulseTime * 8f);
+            batch.setColor(0.55f * pulse, 1f, 0.65f * pulse, 1f);
+        }
         batch.draw(currentFrame,
             x - currentFrame.getRegionWidth() / 2f,
             y - currentFrame.getRegionHeight() / 2f,
             currentFrame.getRegionWidth(),
             currentFrame.getRegionHeight());
+        batch.setColor(Color.WHITE);
     }
 
     @Override
-    public Polygon getHitbox() { return hitbox; }
+    public Polygon getHitbox() {
+        return hitbox;
+    }
 
     @Override
-    public void dispose() {}
+    public void dispose() {
+    }
 }

@@ -57,6 +57,12 @@ public final class LevelLoader {
         float craftingStationX = 0f;
         float craftingStationY = 0f;
         boolean hasCraftingStation = false;
+        float doorHouseX = 0f;
+        float doorHouseY = 0f;
+        boolean hasDoorHouse = false;
+        float doorExitX = 0f;
+        float doorExitY = 0f;
+        boolean hasDoorExit = false;
 
         MapLayer spawnLayer = map.getLayers().get(LevelConstants.SPAWN_LAYER);
         if (spawnLayer != null) {
@@ -125,6 +131,22 @@ public final class LevelLoader {
                         Gdx.app.log("SPAWN", "CraftingStation detectado em: "
                             + craftingStationX + ", " + craftingStationY);
                     }
+                } else if (name.startsWith(OpeningQuest.DOOR_HOUSE_OBJECT)) {
+                    float[] pos = readObjectCenter(object);
+                    if (pos != null) {
+                        doorHouseX = pos[0];
+                        doorHouseY = pos[1];
+                        hasDoorHouse = true;
+                        Gdx.app.log("SPAWN", "DoorHouse detectado em: " + doorHouseX + ", " + doorHouseY);
+                    }
+                } else if (OpeningQuest.DOOR_EXIT_OBJECT.equals(name)) {
+                    float[] pos = readObjectCenter(object);
+                    if (pos != null) {
+                        doorExitX = pos[0];
+                        doorExitY = pos[1];
+                        hasDoorExit = true;
+                        Gdx.app.log("SPAWN", "DoorExit detectado em: " + doorExitX + ", " + doorExitY);
+                    }
                 }
             }
         } else {
@@ -151,7 +173,9 @@ public final class LevelLoader {
         
         return new LevelData(map, spawnX, spawnY, collisionRects, collisionPolygons,
             mentorX, mentorY, hasMentor, oreNodePositions,
-            craftingStationX, craftingStationY, hasCraftingStation);
+            craftingStationX, craftingStationY, hasCraftingStation,
+            doorHouseX, doorHouseY, hasDoorHouse,
+            doorExitX, doorExitY, hasDoorExit);
     }
 
     private static float[] readObjectCenter(MapObject object) {

@@ -2,6 +2,7 @@ package com.donos.zebra.entities;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Polygon;
 import com.donos.zebra.Interaction.Interactable;
@@ -10,12 +11,13 @@ import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.world.OpeningQuest;
 
 /**
- * Interactable copper vein. Three strikes with a pickaxe yield three ore, then the node depletes.
- * Rock-sized (one tile) with a mild copper tint so it stays readable without dominating the scene.
+ * Interactable copper vein. Depletes after {@link OpeningQuest#ORE_NODE_HITS} hits,
+ * then respawns after {@link #RESPAWN_SECONDS} of overworld time.
  */
 public class OreNode implements Entity, Interactable {
 
-    /** Matches a single 16px map tile — rock/decoration scale, not tree/bush scale. */
+    public static final float RESPAWN_SECONDS = 90f;
+
     private static final float SIZE = 16f;
     private static final float RADIUS = 22f;
 
@@ -26,6 +28,10 @@ public class OreNode implements Entity, Interactable {
     private final Polygon hitbox;
 
     private int hitsRemaining = OpeningQuest.ORE_NODE_HITS;
+    private float depletedTimer;
+    private boolean interactionTargeted;
+    private float pulseTime;
+    private BitmapFont progressFont;
 
     public OreNode(float x, float y, Texture texture, DialogueUI dialogueUI) {
         this.x = x;
@@ -36,35 +42,58 @@ public class OreNode implements Entity, Interactable {
         this.hitbox.setPosition(x - SIZE / 2f, y - SIZE / 2f);
     }
 
+    public void setProgressFont(BitmapFont progressFont) {
+        this.progressFont = progressFont;
+    }
+
+    public void setInteractionTargeted(boolean targeted) {
+        this.interactionTargeted = targeted;
+    }
+
+    public boolean isInteractionTargeted() {
+        return interactionTargeted;
+    }
+
     public int getHitsRemaining() {
         return hitsRemaining;
+    }
+
+    public int getHitsCompleted() {
+        return OpeningQuest.ORE_NODE_HITS - hitsRemaining;
+    }
+
+    public String getProgressLabel() {
+        return getHitsCompleted() + "/" + OpeningQuest.ORE_NODE_HITS;
     }
 
     public boolean isDepleted() {
         return hitsRemaining <= 0;
     }
 
+    public float getDepletedTimer() {
+        return depletedTimer;
+    }
+
     @Override
     public void onInteract(Player player) {
         if (isDepleted()) {
-            dialogueUI.showText("Este veio de cobre ja foi esgotado.");
+            if (dialogueUI != null) {
+                dialogueUI.showText("Este veio de cobre ja foi esgotado.");
+            }
             return;
         }
 
         if (!player.getInventory().hasItemQuantity(ItemRegistry.STONE_PICKAXE, 1)) {
-            dialogueUI.showText("Voce precisa de uma picareta para minerar isto.");
+            if (dialogueUI != null) {
+                dialogueUI.showText("Voce precisa de uma picareta para minerar isto.");
+            }
             return;
         }
 
         hitsRemaining--;
         player.getInventory().addItem(ItemRegistry.COPPER_ORE, 1);
-
         if (isDepleted()) {
-            dialogueUI.showText("O veio se esgota. Voce arranca o ultimo pedaco de cobre.");
-        } else {
-            dialogueUI.showText("Clang! Voce extrai cobre. ("
-                + (OpeningQuest.ORE_NODE_HITS - hitsRemaining) + "/"
-                + OpeningQuest.ORE_NODE_HITS + ")");
+            depletedTimer = 0f;
         }
     }
 
@@ -80,6 +109,23 @@ public class OreNode implements Entity, Interactable {
 
     @Override
     public void update(float delta) {
+        if (isDepleted()) {
+            depletedTimer += delta;
+            if (depletedTimer >= RESPAWN_SECONDS) {
+                respawn();
+            }
+        }
+        if (interactionTargeted && !isDepleted()) {
+            pulseTime += delta;
+        } else if (!interactionTargeted) {
+            pulseTime = 0f;
+        }
+    }
+
+    void respawn() {
+        hitsRemaining = OpeningQuest.ORE_NODE_HITS;
+        depletedTimer = 0f;
+        pulseTime = 0f;
     }
 
     @Override
@@ -93,22 +139,28 @@ public class OreNode implements Entity, Interactable {
 
         if (isDepleted()) {
             batch.setColor(0.4f, 0.4f, 0.4f, 0.9f);
+        } else if (interactionTargeted) {
+            float pulse = 0.75f + 0.25f * (float) Math.sin(pulseTime * 8f);
+            batch.setColor(1f, 0.95f * pulse, 0.35f, 1f);
         } else if (hitsRemaining == 1) {
             batch.setColor(0.95f, 0.6f, 0.35f, 1f);
         } else if (hitsRemaining == 2) {
             batch.setColor(1f, 0.72f, 0.4f, 1f);
         } else {
-            // Mild copper tint — distinct from grey rocks, not a blown-out orange orb.
             batch.setColor(1f, 0.75f, 0.45f, 1f);
         }
 
         batch.draw(texture, drawX, drawY, SIZE, SIZE);
         batch.setColor(Color.WHITE);
+
+        if (interactionTargeted && !isDepleted() && progressFont != null) {
+            progressFont.setColor(Color.WHITE);
+            progressFont.draw(batch, getProgressLabel(), x - 8f, y + SIZE / 2f + 14f);
+        }
     }
 
     @Override
     public void dispose() {
-        // Texture owned by AssetManager
     }
 
     @Override

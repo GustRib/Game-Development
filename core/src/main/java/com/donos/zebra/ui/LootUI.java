@@ -56,8 +56,7 @@ public class LootUI extends Table {
         this.add(grid).row();
         
         // Rodapé visual
-        Label help = new Label("[ESPAÇO] PEGAR TUDO", skin);
-        help.setFontScale(0.5f);
+        Label help = new Label("[ESPACO] PEGAR TUDO", skin);
         this.add(help).padTop(10);
         
         this.pack();
@@ -75,7 +74,6 @@ public class LootUI extends Table {
         if (stack.getQuantity() > 1) {
             Label qty = new Label(String.valueOf(stack.getQuantity()), skin);
             qty.setAlignment(Align.bottomRight);
-            qty.setFontScale(0.8f);
             stackGroup.add(qty);
         }
         return stackGroup;

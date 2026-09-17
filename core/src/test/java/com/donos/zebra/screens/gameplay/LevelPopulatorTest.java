@@ -42,13 +42,15 @@ class LevelPopulatorTest {
     }
 
     @Test
-    void tiledModeSpawnsTwoOrcsAtFixedOffsets() {
+    void tiledModeSpawnsFiveOrcsIncludingSoutheast() {
         List<Vector2> spawns = LevelPopulator.resolveOrcSpawns(false, null, 100f, 200f);
-        assertEquals(2, spawns.size());
+        assertEquals(5, spawns.size());
         assertEquals(160f, spawns.get(0).x, 0.01f);
         assertEquals(260f, spawns.get(0).y, 0.01f);
         assertEquals(220f, spawns.get(1).x, 0.01f);
         assertEquals(160f, spawns.get(1).y, 0.01f);
+        assertEquals(650f, spawns.get(2).x, 0.01f);
+        assertEquals(150f, spawns.get(2).y, 0.01f);
     }
 
     @Test

@@ -2,7 +2,10 @@ package com.donos.zebra.entities;
 
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.items.OrcLootRolls;
 import org.junit.jupiter.api.Test;
+
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,16 +42,18 @@ class OrcCombatTest {
 
     @Test
     void orcDiesAtZeroHealthAndOffersMixedOreLoot() {
-        Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations());
+        Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations(), new Random(42L));
         orc.takeDamage(40f);
 
         assertTrue(orc.isDead());
         assertTrue(orc.hasLootAvailable());
         assertEquals(2, orc.getLootTable().size());
         assertEquals(ItemRegistry.COPPER_ORE.getId(), orc.getLootTable().get(0).getDefinition().getId());
-        assertEquals(1, orc.getLootTable().get(0).getQuantity());
+        int copperQty = orc.getLootTable().get(0).getQuantity();
+        assertTrue(copperQty >= OrcLootRolls.MIN_QTY && copperQty <= OrcLootRolls.MAX_QTY);
         assertEquals(ItemRegistry.IRON_ORE.getId(), orc.getLootTable().get(1).getDefinition().getId());
-        assertEquals(2, orc.getLootTable().get(1).getQuantity());
+        int ironQty = orc.getLootTable().get(1).getQuantity();
+        assertTrue(ironQty >= OrcLootRolls.MIN_QTY && ironQty <= OrcLootRolls.MAX_QTY);
 
         orc.clearLoot();
         assertFalse(orc.hasLootAvailable());

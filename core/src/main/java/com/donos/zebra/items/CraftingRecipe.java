@@ -48,16 +48,24 @@ public final class CraftingRecipe {
     }
 
     /**
-     * Consumes materials and adds the result. Returns false if materials were insufficient
-     * (inventory unchanged) or if the result could not be added after consume (should not happen
-     * for unique gear into a normal inventory).
+     * Consumes materials only (no result). Used when a delayed craft starts.
      */
-    public boolean craft(Inventory inventory) {
+    public boolean consumeMaterials(Inventory inventory) {
         if (!canAfford(inventory)) {
             return false;
         }
         for (Map.Entry<ItemDefinition, Integer> entry : costs.entrySet()) {
             inventory.removeItem(entry.getKey(), entry.getValue());
+        }
+        return true;
+    }
+
+    /**
+     * Consumes materials and adds the result immediately.
+     */
+    public boolean craft(Inventory inventory) {
+        if (!consumeMaterials(inventory)) {
+            return false;
         }
         return inventory.addItem(result, 1);
     }

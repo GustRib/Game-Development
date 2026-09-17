@@ -24,9 +24,8 @@ public class DialogueUI extends Table {
         this.textLabel.setWrap(true);
         this.add(textLabel).expandX().fillX().align(Align.topLeft).row();
 
-        Label nextLabel = new Label("[ESPAÇO] FECHAR", skin);
+        Label nextLabel = new Label("[ESPACO] FECHAR", skin);
         nextLabel.setColor(Color.LIGHT_GRAY);
-        nextLabel.setFontScale(0.6f);
         this.add(nextLabel).expandX().align(Align.bottomRight).padTop(10);
 
         this.setVisible(false);

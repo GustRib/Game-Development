@@ -10,6 +10,7 @@ import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
@@ -38,13 +39,17 @@ class OpeningQuestSliceTest {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         player.getInventory().addItem(ItemRegistry.STONE_PICKAXE, 1);
 
+        assertEquals("0/3", node.getProgressLabel());
         for (int i = 0; i < OpeningQuest.ORE_NODE_HITS; i++) {
             node.onInteract(player);
+            assertEquals((i + 1) + "/" + OpeningQuest.ORE_NODE_HITS, node.getProgressLabel());
         }
 
         assertEquals(OpeningQuest.ORE_NODE_HITS, player.getInventory().getItemCount(ItemRegistry.COPPER_ORE));
         assertTrue(node.isDepleted());
         assertEquals(0, node.getHitsRemaining());
+        verify(dialogueUI, never()).showText(contains("Clang"));
+        verify(dialogueUI, never()).showText(contains("esgota"));
     }
 
     @Test
@@ -77,7 +82,8 @@ class OpeningQuestSliceTest {
 
         assertTrue(player.hasFirstSword());
         assertEquals(0, player.getInventory().getItemCount(ItemRegistry.COPPER_ORE));
-        assertEquals(1, player.getInventory().getItemCount(ItemRegistry.IRON_SWORD));
+        assertEquals(0, player.getInventory().getItemCount(ItemRegistry.IRON_SWORD));
+        assertSame(ItemRegistry.IRON_SWORD, player.getEquippedWeapon());
         verify(dialogueUI).showText(contains("Bom trabalho"));
         verify(dialogueUI).showText(contains("Eis sua primeira espada"));
     }

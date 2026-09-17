@@ -43,6 +43,8 @@ class AssetQueueOwnershipTest {
         assertTrue(unique.contains("items/copper_helmet.png"));
         assertTrue(unique.contains("items/copper_chestplate.png"));
         assertTrue(unique.contains("items/copper_boots.png"));
+        assertTrue(unique.contains("items/copper_gloves.png"));
+        assertTrue(unique.contains(LevelConstants.TAVERN_BACKGROUND));
         assertFalse(unique.contains("items/iron_sword.png"));
         assertFalse(unique.contains("items/copper_longsword.png"));
         assertFalse(unique.contains("items/copper_mail.png"));
@@ -54,5 +56,6 @@ class AssetQueueOwnershipTest {
         verify(assetManager).load(eq("items/copper_ore.png"), eq(Texture.class));
         verify(assetManager).load(eq("items/copper_sword.png"), eq(Texture.class));
         verify(assetManager).load(eq("items/iron_ore.png"), eq(Texture.class));
+        verify(assetManager).load(eq(LevelConstants.TAVERN_BACKGROUND), eq(Texture.class));
     }
 }

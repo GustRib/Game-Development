@@ -5,154 +5,267 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Window;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
-import com.donos.zebra.items.Inventory; 
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.donos.zebra.entities.Player;
+import com.donos.zebra.items.Inventory;
 import com.donos.zebra.items.ItemDefinition;
+import com.donos.zebra.items.ItemStack;
 
-public class InventoryUI extends Table {
+import java.util.ArrayList;
+import java.util.List;
+
+public class InventoryUI extends GameWindow {
 
     private final DragAndDrop dragAndDrop;
     private final AssetManager assetManager;
     private final Inventory backendInventory;
-    private final Skin skin; // Guardamos uma referência da skin para o ícone de arrasto
+    private final Skin skin;
+    private final Player player;
+    private final Table slotGrid;
+    private final ScrollPane scrollPane;
+    private final List<InventorySlotActor> slots = new ArrayList<>();
+    private ItemTooltipPanel tooltipPanel;
+    private Runnable onEquipmentChanged;
+    private java.util.function.Consumer<String> equipToast;
+    private int currentColumns = 4;
 
     public InventoryUI(Inventory backendInventory, Skin skin, AssetManager assetManager) {
+        this(backendInventory, skin, assetManager, null);
+    }
+
+    public InventoryUI(Inventory backendInventory, Skin skin, AssetManager assetManager, Player player) {
+        super("Inventario", skin);
         this.backendInventory = backendInventory;
         this.skin = skin;
         this.assetManager = assetManager;
+        this.player = player;
         this.dragAndDrop = new DragAndDrop();
-        
-        this.pad(10);
-        this.top().left(); // Alinha o conteúdo interno da tabela ao topo esquerdo
-        this.setVisible(false); 
 
-        int totalSlots = 16; 
-        for (int i = 0; i < totalSlots; i++) {
+        setResizable(true);
+
+        slotGrid = new Table();
+        slotGrid.top().left().pad(4);
+        for (int i = 0; i < 16; i++) {
             InventorySlotActor slotActor = new InventorySlotActor(i, skin, assetManager);
             configurarDragAndDrop(slotActor);
+            configurarRightClickEquip(slotActor);
+            slots.add(slotActor);
+        }
+        layoutSlotGrid(4);
 
-            // Define um tamanho fixo idêntico ao tamanho da textura criada na Skin (40x40)
-            this.add(slotActor).size(40, 40).pad(2);
-            
-            if ((i + 1) % 4 == 0) {
-                this.row();
+        scrollPane = new ScrollPane(slotGrid, skin);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(false, false);
+        add(scrollPane).grow();
+        setSize(280, 320);
+    }
+
+    @Override
+    protected void sizeChanged() {
+        super.sizeChanged();
+        if (slotGrid == null) {
+            return;
+        }
+        float inner = Math.max(80f, getWidth() - getPadLeft() - getPadRight() - 20f);
+        int cols = Math.max(2, Math.min(8, (int) (inner / 54f)));
+        if (cols != currentColumns) {
+            layoutSlotGrid(cols);
+        }
+        invalidateHierarchy();
+    }
+
+    private void layoutSlotGrid(int cols) {
+        currentColumns = cols;
+        slotGrid.clearChildren();
+        for (int i = 0; i < slots.size(); i++) {
+            slotGrid.add(slots.get(i)).size(48, 48).pad(3);
+            if ((i + 1) % cols == 0) {
+                slotGrid.row();
             }
         }
-        
-        // Força a tabela a calcular o seu tamanho real exato com base nos slots adicionados
-        this.pack(); 
+        slotGrid.invalidateHierarchy();
+    }
+
+    public void setOnEquipmentChanged(Runnable onEquipmentChanged) {
+        this.onEquipmentChanged = onEquipmentChanged;
+    }
+
+    public void setEquipToast(java.util.function.Consumer<String> equipToast) {
+        this.equipToast = equipToast;
+    }
+
+    public void setTooltipPanel(ItemTooltipPanel tooltipPanel) {
+        this.tooltipPanel = tooltipPanel;
+        for (InventorySlotActor slot : slots) {
+            slot.setTooltipPanel(tooltipPanel);
+        }
     }
 
     public void refresh() {
-        for (com.badlogic.gdx.scenes.scene2d.Actor actor : this.getChildren()) {
-            if (actor instanceof InventorySlotActor) {
-                InventorySlotActor slotActor = (InventorySlotActor) actor;
-                int index = slotActor.getSlotIndex();
-                
-                com.donos.zebra.items.ItemStack stack = backendInventory.getStackAt(index);
-                
-                if (stack != null) {
-                    slotActor.setItem(stack.getDefinition());
-                } else {
-                    slotActor.setItem(null);
-                }
+        for (InventorySlotActor slotActor : slots) {
+            int index = slotActor.getSlotIndex();
+            ItemStack stack = backendInventory.getStackAt(index);
+            if (stack != null) {
+                slotActor.setItem(stack.getDefinition());
+                slotActor.setQuantity(stack.getQuantity());
+            } else {
+                slotActor.setItem(null);
+                slotActor.setQuantity(0);
             }
+        }
+    }
+
+    @Override
+    public void openPanel() {
+        super.openPanel();
+        refresh();
+    }
+
+    private void configurarRightClickEquip(InventorySlotActor slot) {
+        slot.addListener(new ClickListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                if (button == 1 && player != null && !slot.isEmpty()) {
+                    equipFromInventory(slot.getItem());
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    private void equipFromInventory(ItemDefinition item) {
+        if (item == null || player == null) {
+            return;
+        }
+        if (!player.equipFromInventory(item)) {
+            return;
+        }
+        refresh();
+        if (onEquipmentChanged != null) {
+            onEquipmentChanged.run();
+        }
+        if (equipToast != null) {
+            equipToast.accept(EquipFeedback.forEquip(item));
         }
     }
 
     private void configurarDragAndDrop(InventorySlotActor slot) {
-        // --- 1. ORIGEM ---
         dragAndDrop.addSource(new Source(slot) {
             @Override
             public Payload dragStart(InputEvent event, float x, float y, int pointer) {
                 InventorySlotActor actor = (InventorySlotActor) getActor();
-                if (actor.isEmpty()) return null; 
+                if (actor.isEmpty()) return null;
 
                 Payload payload = new Payload();
-                payload.setObject(actor); 
+                payload.setObject(actor);
 
-                // Passando a skin para o ator de arrasto renderizar o fundo corretamente
                 InventorySlotActor dragActor = new InventorySlotActor(actor.getSlotIndex(), skin, assetManager);
                 dragActor.setItem(actor.getItem());
+                dragActor.setQuantity(actor.getQuantity());
                 dragActor.setSize(actor.getWidth(), actor.getHeight());
                 payload.setDragActor(dragActor);
-
                 return payload;
             }
         });
 
-        // --- 2. ALVO ---
         dragAndDrop.addTarget(new Target(slot) {
             @Override
             public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
-                return true; 
+                return true;
             }
 
             @Override
             public void drop(Source source, Payload payload, float x, float y, int pointer) {
                 InventorySlotActor slotOrigem = (InventorySlotActor) payload.getObject();
                 InventorySlotActor slotDestino = (InventorySlotActor) getActor();
-
                 if (slotOrigem.getSlotIndex() == slotDestino.getSlotIndex()) return;
-
-                // 1. Modifica no backend
                 backendInventory.swapSlots(slotOrigem.getSlotIndex(), slotDestino.getSlotIndex());
-
-                // 2. Atualiza a UI
                 refresh();
             }
-        }); // Chave de fechamento do Target corrigida!
+        });
     }
 
-    /**
-     * Método estático para gerar as texturas dos slots via código.
-     */
-    /**
-     * Método estático para gerar as texturas dos slots e estilos de texto via código.
-     */
     public static Skin createDefaultSkin(BitmapFont font) {
         Skin skin = new Skin();
-
-        // ---- 1. REGISTRA A FONTE E O ESTILO DE LABEL (TEXTO) ----
-        // Isso resolve o erro da LootUI e DialogueUI que precisam exibir textos!
         skin.add("default", font);
-        
-        com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle labelStyle = 
+
+        com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle labelStyle =
             new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle();
         labelStyle.font = font;
         labelStyle.fontColor = Color.WHITE;
         skin.add("default", labelStyle);
 
-        // ---- 2. ESTILO DOS SLOTS (CÓDIGO QUE JÁ REFEZ) ----
-        // Slot Normal: Fundo escuro com borda cinza
-        Pixmap pixmapNormal = new Pixmap(40, 40, Pixmap.Format.RGBA8888);
-        pixmapNormal.setColor(new Color(0.2f, 0.2f, 0.2f, 0.8f));
+        Drawable panelBg = GameWindow.createPaddedWindowBackground(
+            new Color(0.1f, 0.1f, 0.14f, 0.94f),
+            GameWindow.TITLE_PAD, GameWindow.SIDE_PAD, GameWindow.BOTTOM_PAD, GameWindow.SIDE_PAD);
+
+        Window.WindowStyle windowStyle = new Window.WindowStyle();
+        windowStyle.background = panelBg;
+        windowStyle.titleFont = font;
+        windowStyle.titleFontColor = new Color(0.9f, 0.8f, 0.45f, 1f);
+        windowStyle.stageBackground = null;
+        skin.add("default", windowStyle);
+
+        ScrollPane.ScrollPaneStyle scrollStyle = new ScrollPane.ScrollPaneStyle();
+        scrollStyle.background = null;
+        scrollStyle.vScroll = solidDrawable(new Color(0.25f, 0.25f, 0.28f, 0.8f));
+        scrollStyle.vScrollKnob = solidDrawable(new Color(0.45f, 0.45f, 0.5f, 1f));
+        scrollStyle.hScroll = scrollStyle.vScroll;
+        scrollStyle.hScrollKnob = scrollStyle.vScrollKnob;
+        skin.add("default", scrollStyle);
+
+        TextButton.TextButtonStyle closeStyle = new TextButton.TextButtonStyle();
+        closeStyle.font = font;
+        closeStyle.fontColor = Color.WHITE;
+        closeStyle.up = solidDrawable(new Color(0.45f, 0.15f, 0.15f, 1f));
+        closeStyle.down = solidDrawable(new Color(0.3f, 0.1f, 0.1f, 1f));
+        closeStyle.over = solidDrawable(new Color(0.55f, 0.2f, 0.2f, 1f));
+        skin.add("window-close", closeStyle);
+
+        Pixmap pixmapNormal = new Pixmap(48, 48, Pixmap.Format.RGBA8888);
+        pixmapNormal.setColor(new Color(0.2f, 0.2f, 0.2f, 0.85f));
         pixmapNormal.fill();
         pixmapNormal.setColor(Color.GRAY);
-        pixmapNormal.drawRectangle(0, 0, 40, 40);
+        pixmapNormal.drawRectangle(0, 0, 48, 48);
         Texture textureNormal = new Texture(pixmapNormal);
         pixmapNormal.dispose();
 
-        // Slot Hover: Fundo mais claro com borda branca ao passar o mouse
-        Pixmap pixmapHover = new Pixmap(40, 40, Pixmap.Format.RGBA8888);
-        pixmapHover.setColor(new Color(0.3f, 0.3f, 0.3f, 0.9f));
+        Pixmap pixmapHover = new Pixmap(48, 48, Pixmap.Format.RGBA8888);
+        pixmapHover.setColor(new Color(0.32f, 0.32f, 0.35f, 0.95f));
         pixmapHover.fill();
         pixmapHover.setColor(Color.WHITE);
-        pixmapHover.drawRectangle(0, 0, 40, 40);
+        pixmapHover.drawRectangle(0, 0, 48, 48);
         Texture textureHover = new Texture(pixmapHover);
         pixmapHover.dispose();
 
-        com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle slotStyle = new com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle();
-        slotStyle.up = new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(textureNormal);
-        slotStyle.over = new com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(textureHover);
-
+        com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle slotStyle =
+            new com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle();
+        slotStyle.up = new TextureRegionDrawable(textureNormal);
+        slotStyle.over = new TextureRegionDrawable(textureHover);
         skin.add("slot-style", slotStyle);
         return skin;
+    }
+
+    private static Drawable solidDrawable(Color color) {
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(color);
+        pixmap.fill();
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return new TextureRegionDrawable(texture);
     }
 }

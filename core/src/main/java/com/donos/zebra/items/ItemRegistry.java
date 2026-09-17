@@ -16,6 +16,7 @@ public class ItemRegistry {
     public static final ItemDefinition COPPER_LONGSWORD;
     public static final ItemDefinition COPPER_HELMET;
     public static final ItemDefinition COPPER_CHESTPLATE;
+    public static final ItemDefinition COPPER_GLOVES;
     public static final ItemDefinition COPPER_BOOTS;
     public static final ItemDefinition HEALTH_POTION;
     public static final ItemDefinition STONE_PICKAXE;
@@ -98,6 +99,20 @@ public class ItemRegistry {
             ArmorSlot.CHESTPLATE
         );
 
+        COPPER_GLOVES = new ItemDefinition(
+            "copper_gloves",
+            "Luvas de Cobre",
+            "Protecao nas maos. Defesa 1.",
+            ItemType.ARMOR,
+            1,
+            100,
+            false,
+            "items/copper_gloves.png",
+            0,
+            1,
+            ArmorSlot.GLOVES
+        );
+
         COPPER_BOOTS = new ItemDefinition(
             "copper_boots",
             "Botas de Cobre",
@@ -140,6 +155,7 @@ public class ItemRegistry {
         register(COPPER_LONGSWORD);
         register(COPPER_HELMET);
         register(COPPER_CHESTPLATE);
+        register(COPPER_GLOVES);
         register(COPPER_BOOTS);
         register(HEALTH_POTION);
         register(STONE_PICKAXE);

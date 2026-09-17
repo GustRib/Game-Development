@@ -16,6 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,6 +47,22 @@ class CraftingSliceTest {
     }
 
     @Test
+    void craftPlacesItemInInventoryWithoutAutoEquip() {
+        Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
+        player.getInventory().addItem(ItemRegistry.COPPER_ORE, 2);
+        player.getInventory().addItem(ItemRegistry.IRON_ORE, 1);
+
+        assertTrue(CraftingRecipes.COPPER_HELMET.craft(player.getInventory()));
+        assertEquals(1, player.getInventory().getItemCount(ItemRegistry.COPPER_HELMET));
+        assertNull(player.getEquippedHelmet());
+        assertEquals(0f, player.getDefense(), 0.01f);
+
+        assertTrue(player.equipFromInventory(ItemRegistry.COPPER_HELMET));
+        assertSame(ItemRegistry.COPPER_HELMET, player.getEquippedHelmet());
+        assertEquals(0, player.getInventory().getItemCount(ItemRegistry.COPPER_HELMET));
+    }
+
+    @Test
     void eachArmorRecipeCraftsIntoCorrectSlot() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
 
@@ -72,7 +89,7 @@ class CraftingSliceTest {
     }
 
     @Test
-    void defenseSumsAcrossZeroToThreeArmorPieces() {
+    void defenseSumsAcrossArmorPiecesIncludingGloves() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         assertEquals(0f, player.getDefense(), 0.01f);
 
@@ -84,6 +101,52 @@ class CraftingSliceTest {
 
         player.equipArmor(ItemRegistry.COPPER_CHESTPLATE);
         assertEquals(8f, player.getDefense(), 0.01f);
+
+        player.equipArmor(ItemRegistry.COPPER_GLOVES);
+        assertEquals(9f, player.getDefense(), 0.01f);
+    }
+
+    @Test
+    void unequipReturnsSlotAndKeepsInventoryItem() {
+        Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
+        player.getInventory().addItem(ItemRegistry.COPPER_HELMET, 1);
+        assertTrue(player.equipFromInventory(ItemRegistry.COPPER_HELMET));
+        assertEquals(0, player.getInventory().getItemCount(ItemRegistry.COPPER_HELMET));
+        assertEquals(2f, player.getDefense(), 0.01f);
+
+        assertTrue(player.unequipToInventory(ItemRegistry.COPPER_HELMET));
+        assertEquals(0f, player.getDefense(), 0.01f);
+        assertEquals(1, player.getInventory().getItemCount(ItemRegistry.COPPER_HELMET));
+    }
+
+    @Test
+    void equipFromInventoryIsSymmetricWithUnequipAndSwapsOccupiedSlot() {
+        Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
+        player.getInventory().addItem(ItemRegistry.IRON_SWORD, 1);
+        player.getInventory().addItem(ItemRegistry.COPPER_LONGSWORD, 1);
+        player.getInventory().addItem(ItemRegistry.COPPER_HELMET, 1);
+        player.getInventory().addItem(ItemRegistry.COPPER_BOOTS, 1);
+
+        assertTrue(player.equipFromInventory(ItemRegistry.IRON_SWORD));
+        assertSame(ItemRegistry.IRON_SWORD, player.getEquippedWeapon());
+        assertEquals(0, player.getInventory().getItemCount(ItemRegistry.IRON_SWORD));
+
+        assertTrue(player.unequipToInventory(ItemRegistry.IRON_SWORD));
+        assertEquals(null, player.getEquippedWeapon());
+        assertEquals(1, player.getInventory().getItemCount(ItemRegistry.IRON_SWORD));
+
+        assertTrue(player.equipFromInventory(ItemRegistry.IRON_SWORD));
+        assertTrue(player.equipFromInventory(ItemRegistry.COPPER_LONGSWORD));
+        assertSame(ItemRegistry.COPPER_LONGSWORD, player.getEquippedWeapon());
+        assertEquals(1, player.getInventory().getItemCount(ItemRegistry.IRON_SWORD));
+        assertEquals(0, player.getInventory().getItemCount(ItemRegistry.COPPER_LONGSWORD));
+
+        assertTrue(player.equipFromInventory(ItemRegistry.COPPER_HELMET));
+        assertTrue(player.equipFromInventory(ItemRegistry.COPPER_BOOTS));
+        assertSame(ItemRegistry.COPPER_HELMET, player.getEquippedHelmet());
+        assertSame(ItemRegistry.COPPER_BOOTS, player.getEquippedBoots());
+        assertEquals(0, player.getInventory().getItemCount(ItemRegistry.COPPER_HELMET));
+        assertEquals(4f, player.getDefense(), 0.01f);
     }
 
     @Test
@@ -171,6 +234,7 @@ class CraftingSliceTest {
         assertEquals("items/copper_sword.png", ItemRegistry.IRON_SWORD.getIconPath());
         assertEquals("items/copper_helmet.png", ItemRegistry.COPPER_HELMET.getIconPath());
         assertEquals("items/copper_chestplate.png", ItemRegistry.COPPER_CHESTPLATE.getIconPath());
+        assertEquals("items/copper_gloves.png", ItemRegistry.COPPER_GLOVES.getIconPath());
         assertEquals("items/copper_boots.png", ItemRegistry.COPPER_BOOTS.getIconPath());
     }
 }

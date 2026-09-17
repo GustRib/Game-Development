@@ -1,5 +1,6 @@
 package com.donos.zebra.ui;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -7,6 +8,8 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -15,6 +18,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.donos.zebra.entities.Player;
+import com.donos.zebra.items.CraftingController;
+import com.donos.zebra.items.CraftingJob;
 import com.donos.zebra.items.CraftingRecipe;
 import com.donos.zebra.items.CraftingRecipes;
 import com.donos.zebra.items.Inventory;
@@ -23,91 +28,166 @@ import com.donos.zebra.items.ItemDefinition;
 import java.util.Map;
 
 /**
- * Scene2D crafting panel shown when interacting with the world forge.
+ * Crafting forge window — starts delayed crafts via {@link CraftingController}.
  */
-public class CraftingUI extends Table {
+public class CraftingUI extends GameWindow {
 
     private final Skin skin;
     private final AssetManager assetManager;
+    private final CraftingController craftingController;
     private final Label statusLabel;
+    private final Label countdownLabel;
+    private final ProgressBar progressBar;
+    private final Table recipeTable;
+    private final ScrollPane scrollPane;
     private Player boundPlayer;
+    private Runnable onOpened;
+    private Runnable onInventoryChanged;
 
-    public CraftingUI(Skin skin, AssetManager assetManager) {
+    public CraftingUI(Skin skin, AssetManager assetManager, CraftingController craftingController) {
+        super("Forja", skin);
         this.skin = skin;
         this.assetManager = assetManager;
+        this.craftingController = craftingController;
         ensureButtonStyle(skin);
+        ensureProgressStyle(skin);
 
-        setBackground(createColorDrawable(new Color(0.1f, 0.12f, 0.14f, 0.92f)));
-        pad(12);
-        align(Align.top);
+        setResizable(false);
 
-        Label title = new Label("FORJA", skin);
-        title.setColor(new Color(0.85f, 0.75f, 0.4f, 1f));
-        add(title).padBottom(8).row();
+        recipeTable = new Table();
+        recipeTable.top().left().pad(4);
 
         statusLabel = new Label("", skin);
-        statusLabel.setFontScale(0.7f);
         statusLabel.setWrap(true);
 
-        setVisible(false);
+        countdownLabel = new Label("", skin);
+        countdownLabel.setColor(new Color(0.9f, 0.8f, 0.4f, 1f));
+        progressBar = new ProgressBar(0f, 1f, 0.01f, false, skin, "craft-progress");
+        progressBar.setAnimateDuration(0.05f);
+
+        scrollPane = new ScrollPane(recipeTable, skin);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+        scrollPane.setForceScroll(false, true);
+
+        Table body = new Table();
+        body.add(scrollPane).grow().row();
+        body.add(countdownLabel).growX().padTop(4).row();
+        body.add(progressBar).growX().height(14).pad(4).row();
+        body.add(statusLabel).growX().pad(6).row();
+        Label help = new Label("[E/ESPACO] Fechar", skin);
+        help.setColor(Color.LIGHT_GRAY);
+        body.add(help).padBottom(4).left();
+
+        add(body).grow();
+        float maxH = Math.min(420f, Gdx.graphics.getHeight() * 0.75f);
+        float maxW = Math.min(360f, Gdx.graphics.getWidth() * 0.55f);
+        setSize(maxW, maxH);
+    }
+
+    public void setOnOpened(Runnable onOpened) {
+        this.onOpened = onOpened;
+    }
+
+    public void setOnInventoryChanged(Runnable onInventoryChanged) {
+        this.onInventoryChanged = onInventoryChanged;
     }
 
     public void open(Player player) {
         this.boundPlayer = player;
         statusLabel.setText("Escolha uma receita.");
+        statusLabel.setColor(Color.WHITE);
+        float maxH = Math.min(420f, Gdx.graphics.getHeight() * 0.75f);
+        float maxW = Math.min(360f, Gdx.graphics.getWidth() * 0.55f);
+        setSize(maxW, maxH);
+        setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center);
         rebuild();
-        setVisible(true);
+        refreshProgressUi();
+        openPanel();
+        if (getStage() != null) {
+            clampToStage(getStage().getWidth(), getStage().getHeight());
+        }
+        if (onOpened != null) {
+            onOpened.run();
+        }
     }
 
     public void close() {
-        setVisible(false);
+        closePanel();
+    }
+
+    @Override
+    public void closePanel() {
         boundPlayer = null;
+        super.closePanel();
+    }
+
+    /** Call each frame so bar/countdown stay live while the window is open. */
+    public void refreshProgressUi() {
+        CraftingJob job = craftingController.getActiveJob();
+        if (job == null) {
+            countdownLabel.setText("");
+            progressBar.setValue(0f);
+            progressBar.setVisible(false);
+            return;
+        }
+        progressBar.setVisible(true);
+        progressBar.setValue(job.getProgress());
+        if (job.isComplete()) {
+            countdownLabel.setText("Concluido: " + job.getRecipe().getResult().getName());
+            statusLabel.setText("Forjado: " + job.getRecipe().getResult().getName() + " (inventario).");
+            statusLabel.setColor(Color.GREEN);
+        } else {
+            int secs = (int) Math.ceil(job.getSecondsRemaining());
+            countdownLabel.setText("Forjando... " + secs);
+        }
     }
 
     public void rebuild() {
-        clearChildren();
-
-        Label title = new Label("FORJA", skin);
-        title.setColor(new Color(0.85f, 0.75f, 0.4f, 1f));
-        add(title).padBottom(8).row();
-
+        recipeTable.clearChildren();
         if (boundPlayer == null) {
-            pack();
             return;
         }
 
+        float contentWidth = Math.max(180f, getWidth() - getPadLeft() - getPadRight() - 28f);
         Inventory inventory = boundPlayer.getInventory();
+        boolean busy = craftingController.isBusy();
         for (CraftingRecipe recipe : CraftingRecipes.all()) {
-            add(buildRecipeRow(recipe, inventory)).growX().padBottom(6).row();
+            recipeTable.add(buildRecipeRow(recipe, inventory, contentWidth, busy))
+                .width(contentWidth).growX().padBottom(6).row();
         }
-
-        add(statusLabel).growX().padTop(4).row();
-        Label help = new Label("[E/ESPACO] Fechar", skin);
-        help.setFontScale(0.55f);
-        help.setColor(Color.LIGHT_GRAY);
-        add(help).padTop(6);
-        pack();
+        recipeTable.pack();
+        scrollPane.layout();
     }
 
-    private Table buildRecipeRow(CraftingRecipe recipe, Inventory inventory) {
+    @Override
+    protected void sizeChanged() {
+        super.sizeChanged();
+        if (boundPlayer != null && recipeTable != null) {
+            rebuild();
+        }
+    }
+
+    private Table buildRecipeRow(CraftingRecipe recipe, Inventory inventory, float width, boolean busy) {
         Table row = new Table();
         row.setBackground(createColorDrawable(new Color(0.18f, 0.18f, 0.2f, 0.95f)));
         row.pad(6);
+        row.left();
 
         boolean canAfford = recipe.canAfford(inventory);
         ItemDefinition result = recipe.getResult();
 
         Table header = new Table();
-        Image icon = createResultIcon(result, canAfford);
+        Image icon = createResultIcon(result, canAfford && !busy);
         if (icon != null) {
             header.add(icon).size(24, 24).padRight(6);
         }
 
         Label name = new Label(recipe.getDisplayName(), skin);
-        name.setFontScale(0.75f);
-        name.setColor(canAfford ? Color.WHITE : Color.GRAY);
-        header.add(name).left().growX();
-        row.add(header).left().growX().row();
+        name.setColor(canAfford && !busy ? Color.WHITE : Color.GRAY);
+        name.setWrap(true);
+        header.add(name).growX().left();
+        row.add(header).width(width - 12f).growX().row();
 
         String statLine;
         if (result.getAttackDamage() > 0) {
@@ -116,22 +196,30 @@ public class CraftingUI extends Table {
             statLine = "Defesa " + result.getDefense();
         }
         Label stats = new Label(statLine + "  |  " + formatCosts(recipe, inventory), skin);
-        stats.setFontScale(0.6f);
-        stats.setColor(canAfford ? new Color(0.7f, 0.85f, 0.7f, 1f) : Color.DARK_GRAY);
-        row.add(stats).left().growX().padTop(2).row();
+        stats.setWrap(true);
+        stats.setColor(canAfford && !busy ? new Color(0.7f, 0.85f, 0.7f, 1f) : Color.DARK_GRAY);
+        row.add(stats).width(width - 12f).growX().padTop(2).left().row();
 
-        TextButton craftBtn = new TextButton(canAfford ? "CRIAR" : "FALTA MATERIAL", skin, "craft");
-        craftBtn.setDisabled(!canAfford);
-        if (!canAfford) {
+        String btnText;
+        if (busy) {
+            btnText = "FORJANDO...";
+        } else if (canAfford) {
+            btnText = "CRIAR";
+        } else {
+            btnText = "FALTA MATERIAL";
+        }
+        TextButton craftBtn = new TextButton(btnText, skin, "craft");
+        craftBtn.setDisabled(busy || !canAfford);
+        if (busy || !canAfford) {
             craftBtn.setColor(Color.DARK_GRAY);
         }
         craftBtn.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                tryCraft(recipe);
+                tryStartCraft(recipe);
             }
         });
-        row.add(craftBtn).padTop(4).height(22).growX();
+        row.add(craftBtn).padTop(4).height(28).growX();
         return row;
     }
 
@@ -147,8 +235,14 @@ public class CraftingUI extends Table {
         return image;
     }
 
-    private void tryCraft(CraftingRecipe recipe) {
+    private void tryStartCraft(CraftingRecipe recipe) {
         if (boundPlayer == null) {
+            return;
+        }
+        if (craftingController.isBusy()) {
+            statusLabel.setText("Ja ha uma forja em andamento.");
+            statusLabel.setColor(Color.ORANGE);
+            rebuild();
             return;
         }
         if (!recipe.canAfford(boundPlayer.getInventory())) {
@@ -157,16 +251,19 @@ public class CraftingUI extends Table {
             rebuild();
             return;
         }
-        boolean ok = recipe.craft(boundPlayer.getInventory());
+        boolean ok = craftingController.tryStart(recipe, boundPlayer.getInventory());
         if (ok) {
-            boundPlayer.equipCrafted(recipe.getResult());
-            statusLabel.setText("Forjado: " + recipe.getResult().getName() + " (equipado).");
-            statusLabel.setColor(Color.GREEN);
+            statusLabel.setText("Forjando " + recipe.getResult().getName() + "...");
+            statusLabel.setColor(Color.LIGHT_GRAY);
+            if (onInventoryChanged != null) {
+                onInventoryChanged.run();
+            }
         } else {
-            statusLabel.setText("Falha ao forjar.");
+            statusLabel.setText("Nao foi possivel iniciar a forja.");
             statusLabel.setColor(Color.RED);
         }
         rebuild();
+        refreshProgressUi();
     }
 
     private static String formatCosts(CraftingRecipe recipe, Inventory inventory) {
@@ -194,6 +291,16 @@ public class CraftingUI extends Table {
         style.down = createColorDrawable(new Color(0.25f, 0.2f, 0.1f, 1f));
         style.disabled = createColorDrawable(new Color(0.2f, 0.2f, 0.2f, 1f));
         skin.add("craft", style);
+    }
+
+    private static void ensureProgressStyle(Skin skin) {
+        if (skin.has("craft-progress", ProgressBar.ProgressBarStyle.class)) {
+            return;
+        }
+        ProgressBar.ProgressBarStyle style = new ProgressBar.ProgressBarStyle();
+        style.background = createColorDrawable(new Color(0.15f, 0.15f, 0.18f, 1f));
+        style.knobBefore = createColorDrawable(new Color(0.75f, 0.55f, 0.2f, 1f));
+        skin.add("craft-progress", style);
     }
 
     private static Drawable createColorDrawable(Color color) {

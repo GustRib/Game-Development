@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
@@ -23,25 +24,35 @@ import com.donos.zebra.config.DungeonGenerationConfig;
 import com.donos.zebra.config.GameConfig;
 import com.donos.zebra.entities.Enemy;
 import com.donos.zebra.entities.Entity;
+import com.donos.zebra.entities.MapDoor;
 import com.donos.zebra.entities.Player;
 import com.donos.zebra.entities.DamageText;
+import com.donos.zebra.items.CraftingController;
 import com.donos.zebra.items.ItemStack;
 import com.donos.zebra.screens.gameplay.CombatController;
 import com.donos.zebra.screens.gameplay.LevelPopulator;
 import com.donos.zebra.screens.gameplay.PlayerDeathHandler;
+import com.donos.zebra.screens.gameplay.SuspendedOverworld;
 import com.donos.zebra.ui.CraftingUI;
 import com.donos.zebra.ui.DialogueUI;
+import com.donos.zebra.ui.EquipmentUI;
 import com.donos.zebra.ui.InventoryUI;
+import com.donos.zebra.ui.ItemTooltipPanel;
 import com.donos.zebra.ui.LootUI;
+import com.donos.zebra.ui.StatusToast;
+import com.donos.zebra.ui.UiPanelStack;
+import com.donos.zebra.entities.OreNode;
 import com.donos.zebra.world.CameraController;
 import com.donos.zebra.world.DungeonMapAdapter;
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.world.LevelData;
 import com.donos.zebra.world.LevelLoader;
+import com.donos.zebra.world.TavernInteriorFactory;
 import com.donos.zebra.world.dungeon.DungeonGenerator;
 import com.donos.zebra.world.dungeon.DungeonMap;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class GameScreen extends AbstractScreen {
@@ -58,28 +69,42 @@ public class GameScreen extends AbstractScreen {
 
     private float initialSpawnX;
     private float initialSpawnY;
+    private float outdoorReturnX;
+    private float outdoorReturnY;
 
     private DungeonMap dungeonMap;
     private BitmapFont damageFont;
+    private BitmapFont uiFont;
     private TiledMap map;
     private boolean proceduralMap;
+    private boolean inTavern;
+    private Texture tavernBackground;
     private OrthogonalTiledMapRenderer mapRenderer;
     private CameraController cameraController;
     private Array<Rectangle> collisionRects;
     private Array<Polygon> collisionPolygons;
 
+    /** Live overworld parked while inside the tavern (not reloaded on exit). */
+    private SuspendedOverworld suspendedOverworld;
+
     private Music gameplayMusic;
     private ShapeRenderer shapeRenderer;
 
     private Enemy activeLootTarget = null;
+    private Enemy highlightedLootCorpse = null;
 
     private Stage uiStage;
     private InventoryUI inventoryWindow;
+    private EquipmentUI equipmentWindow;
+    private ItemTooltipPanel tooltipPanel;
     private LootUI lootWindow;
     private Skin uiSkin;
+    private final UiPanelStack panelStack = new UiPanelStack();
 
     private DialogueUI dialogueWindow;
     private CraftingUI craftingWindow;
+    private final CraftingController craftingController = new CraftingController();
+    private StatusToast statusToast;
     private final List<Interactable> interactables = new ArrayList<>();
     private Interactable activeInteractionTarget = null;
 
@@ -90,34 +115,50 @@ public class GameScreen extends AbstractScreen {
 
     @Override
     public void show() {
-        LevelData levelData = loadLevelData();
         proceduralMap = GameConfig.USE_PROCEDURAL_DUNGEON;
-        map = levelData.map;
-        collisionRects = levelData.collisionRects;
-        collisionPolygons = levelData.collisionPolygons;
-
-        mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
-        player = new Player(game.getAssetManager());
-
-        initialSpawnX = levelData.spawnX;
-        initialSpawnY = levelData.spawnY;
-        player.setPosition(initialSpawnX, initialSpawnY);
-
-        entities.clear();
-        interactables.clear();
-        entities.add(player);
-        damageTexts.clear();
+        inTavern = false;
+        suspendedOverworld = null;
 
         damageFont = new BitmapFont();
-        damageFont.getData().setScale(0.6f);
+        damageFont.getData().setScale(0.85f);
+        uiFont = new BitmapFont();
+        uiFont.getData().setScale(1.4f);
         shapeRenderer = new ShapeRenderer();
 
         uiStage = new Stage(new ScreenViewport());
-        uiSkin = InventoryUI.createDefaultSkin(damageFont);
+        uiSkin = InventoryUI.createDefaultSkin(uiFont);
 
-        inventoryWindow = new InventoryUI(player.getInventory(), uiSkin, game.getAssetManager());
-        inventoryWindow.setPosition(20, Gdx.graphics.getHeight() / 2f, Align.topLeft);
+        player = new Player(game.getAssetManager());
+
+        inventoryWindow = new InventoryUI(player.getInventory(), uiSkin, game.getAssetManager(), player);
+        inventoryWindow.setPosition(24, Gdx.graphics.getHeight() / 2f + 40f, Align.topLeft);
+        inventoryWindow.setOnClosed(() -> panelStack.remove(inventoryWindow));
         uiStage.addActor(inventoryWindow);
+
+        tooltipPanel = new ItemTooltipPanel(uiSkin);
+        uiStage.addActor(tooltipPanel);
+        inventoryWindow.setTooltipPanel(tooltipPanel);
+
+        equipmentWindow = new EquipmentUI(uiSkin, game.getAssetManager(), tooltipPanel);
+        equipmentWindow.bind(player);
+        equipmentWindow.setPosition(Gdx.graphics.getWidth() - 24f, Gdx.graphics.getHeight() / 2f + 40f, Align.topRight);
+        equipmentWindow.setOnClosed(() -> panelStack.remove(equipmentWindow));
+        uiStage.addActor(equipmentWindow);
+
+        statusToast = new StatusToast(uiSkin);
+        statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
+        uiStage.addActor(statusToast);
+
+        inventoryWindow.setOnEquipmentChanged(equipmentWindow::refresh);
+        equipmentWindow.setOnInventoryChanged(inventoryWindow::refresh);
+        inventoryWindow.setEquipToast(msg -> {
+            statusToast.show(msg);
+            statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
+        });
+        equipmentWindow.setEquipToast(msg -> {
+            statusToast.show(msg);
+            statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
+        });
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(uiStage);
@@ -128,24 +169,33 @@ public class GameScreen extends AbstractScreen {
         uiStage.addActor(lootWindow);
 
         dialogueWindow = new DialogueUI(uiSkin);
-        dialogueWindow.setSize(400, 80);
-        dialogueWindow.setPosition(Gdx.graphics.getWidth() / 2f, 50, Align.bottom);
+        dialogueWindow.setSize(560, 140);
+        dialogueWindow.setPosition(Gdx.graphics.getWidth() / 2f, 60, Align.bottom);
         uiStage.addActor(dialogueWindow);
 
-        craftingWindow = new CraftingUI(uiSkin, game.getAssetManager());
+        craftingWindow = new CraftingUI(uiSkin, game.getAssetManager(), craftingController);
         craftingWindow.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center);
+        craftingWindow.setOnOpened(() -> panelStack.push(craftingWindow));
+        craftingWindow.setOnClosed(() -> {
+            panelStack.remove(craftingWindow);
+            player.setInteracting(false);
+            activeInteractionTarget = null;
+        });
+        craftingWindow.setOnInventoryChanged(() -> {
+            inventoryWindow.refresh();
+            equipmentWindow.refresh();
+        });
         uiStage.addActor(craftingWindow);
 
-        LevelPopulator.addMentor(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
-        LevelPopulator.addOreNodes(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
-        LevelPopulator.addCraftingStation(
-            levelData, craftingWindow, game.getAssetManager(), interactables, entities, collisionPolygons);
-        LevelPopulator.addOrcs(
-            proceduralMap, dungeonMap, initialSpawnX, initialSpawnY, game.getAssetManager(), entities);
+        if (game.getAssetManager().isLoaded(LevelConstants.TAVERN_BACKGROUND)) {
+            tavernBackground = game.getAssetManager().get(LevelConstants.TAVERN_BACKGROUND, Texture.class);
+        }
 
         OrthographicCamera camera = new OrthographicCamera();
         applyCameraViewport(camera);
         cameraController = new CameraController(camera);
+
+        bootstrapOverworld();
 
         gameplayMusic = Gdx.audio.newMusic(Gdx.files.internal("track5.wav"));
         gameplayMusic.setLooping(true);
@@ -153,19 +203,174 @@ public class GameScreen extends AbstractScreen {
         gameplayMusic.play();
     }
 
+    /** First load only — populates exterior from LevelLoader/Populator. */
+    private void bootstrapOverworld() {
+        inTavern = false;
+        LevelData levelData = loadOverworldLevelData();
+        map = levelData.map;
+        collisionRects = levelData.collisionRects;
+        collisionPolygons = levelData.collisionPolygons;
+        if (mapRenderer != null) {
+            mapRenderer.dispose();
+        }
+        mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
+
+        initialSpawnX = levelData.spawnX;
+        initialSpawnY = levelData.spawnY;
+        outdoorReturnX = levelData.hasDoorHouse ? levelData.doorHouseX : levelData.spawnX;
+        outdoorReturnY = levelData.hasDoorHouse ? levelData.doorHouseY - 18f : levelData.spawnY;
+        player.setPosition(initialSpawnX, initialSpawnY);
+
+        entities.clear();
+        interactables.clear();
+        entities.add(player);
+        damageTexts.clear();
+
+        LevelPopulator.addMentor(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        LevelPopulator.addOreNodes(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        wireOreNodeFonts();
+        LevelPopulator.addDoorHouse(levelData, interactables, entities, p -> enterTavern());
+        LevelPopulator.addOrcs(
+            proceduralMap, dungeonMap, initialSpawnX, initialSpawnY, game.getAssetManager(), entities);
+    }
+
+    private void wireOreNodeFonts() {
+        for (Entity e : entities) {
+            if (e instanceof OreNode) {
+                ((OreNode) e).setProgressFont(damageFont);
+            }
+        }
+    }
+
+    private void enterTavern() {
+        outdoorReturnX = player.getX();
+        outdoorReturnY = player.getY();
+        player.setInteracting(false);
+        activeInteractionTarget = null;
+        if (craftingWindow != null) craftingWindow.close();
+        if (dialogueWindow != null) dialogueWindow.hideDialogue();
+
+        // Park live overworld — do NOT dispose orcs/ore/mentor
+        List<Entity> parkedEntities = new ArrayList<>();
+        for (Entity e : entities) {
+            if (e != player) {
+                parkedEntities.add(e);
+            }
+        }
+        suspendedOverworld = new SuspendedOverworld(
+            map, collisionRects, collisionPolygons, parkedEntities, new ArrayList<>(interactables));
+
+        entities.removeIf(e -> e != player);
+        interactables.clear();
+        damageTexts.clear();
+
+        if (mapRenderer != null) {
+            mapRenderer.dispose();
+            mapRenderer = null;
+        }
+
+        inTavern = true;
+        TiledMap tavernMap = TavernInteriorFactory.buildMap();
+        LevelData levelData = LevelLoader.load(tavernMap);
+        map = levelData.map;
+        collisionRects = levelData.collisionRects;
+        collisionPolygons = levelData.collisionPolygons;
+        mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
+
+        player.setPosition(levelData.spawnX, levelData.spawnY);
+        LevelPopulator.addCraftingStation(
+            levelData, craftingWindow, game.getAssetManager(), interactables, entities, collisionPolygons);
+        LevelPopulator.addDoorExit(levelData, interactables, entities, p -> exitTavern());
+    }
+
+    private void exitTavern() {
+        float returnX = outdoorReturnX;
+        float returnY = outdoorReturnY;
+        player.setInteracting(false);
+        activeInteractionTarget = null;
+        if (craftingWindow != null) craftingWindow.close();
+
+        // Dispose only tavern-local entities/map
+        Iterator<Entity> it = entities.iterator();
+        while (it.hasNext()) {
+            Entity e = it.next();
+            if (e != player) {
+                e.dispose();
+                it.remove();
+            }
+        }
+        interactables.clear();
+        if (map != null) {
+            map.dispose();
+        }
+        if (mapRenderer != null) {
+            mapRenderer.dispose();
+            mapRenderer = null;
+        }
+
+        if (suspendedOverworld == null) {
+            bootstrapOverworld();
+            player.setPosition(returnX, returnY);
+            return;
+        }
+
+        // Restore exact overworld runtime state
+        inTavern = false;
+        map = suspendedOverworld.map;
+        collisionRects = suspendedOverworld.collisionRects;
+        collisionPolygons = suspendedOverworld.collisionPolygons;
+        mapRenderer = new OrthogonalTiledMapRenderer(map, UNIT_SCALE);
+
+        entities.clear();
+        entities.add(player);
+        entities.addAll(suspendedOverworld.entities);
+        interactables.clear();
+        interactables.addAll(suspendedOverworld.interactables);
+        suspendedOverworld = null;
+
+        player.setPosition(returnX, returnY);
+    }
+
     @Override
     public void render(float delta) {
         clearScreen(0, 0, 0, 1);
 
-        damageFont.getData().setScale(0.8f);
-
         handleItemSystemInputs();
+        syncUiInteractionLock();
+        updateInteractionTargetFeedback(delta);
+
+        // Craft timer is player-owned (tavern forge) — ticks even with UI closed / in tavern.
+        boolean craftWasBusy = craftingController.isBusy();
+        craftingController.update(delta);
+        if (craftWasBusy && craftingController.hasCompletedJob()) {
+            inventoryWindow.refresh();
+            equipmentWindow.refresh();
+            if (craftingWindow.isVisible()) {
+                craftingWindow.rebuild();
+            }
+            statusToast.show("Forja concluida: "
+                + craftingController.getActiveJob().getRecipe().getResult().getName());
+            statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
+        }
+        if (craftingWindow.isVisible()) {
+            craftingWindow.refreshProgressUi();
+        }
+        statusToast.update(delta);
 
         player.update(delta, collisionPolygons);
 
-        CombatController.resolvePlayerMelee(player, entities, damageTexts);
-        CombatController.updateDamageTexts(damageTexts, delta);
-        CombatController.updateEntities(player, entities, damageTexts, delta, collisionPolygons);
+        if (!inTavern) {
+            CombatController.resolvePlayerMelee(player, entities, damageTexts);
+            CombatController.updateDamageTexts(damageTexts, delta);
+            CombatController.updateEntities(player, entities, damageTexts, delta, collisionPolygons);
+        } else {
+            CombatController.updateDamageTexts(damageTexts, delta);
+            for (Entity ent : entities) {
+                if (!(ent instanceof Player) && !(ent instanceof Enemy)) {
+                    ent.update(delta);
+                }
+            }
+        }
 
         cameraController.follow(player.getX(), player.getY());
         mapRenderer.setView(cameraController.getCamera());
@@ -174,16 +379,29 @@ public class GameScreen extends AbstractScreen {
         batch.setProjectionMatrix(cameraController.getCamera().combined);
         beginBatch();
 
+        if (inTavern && tavernBackground != null) {
+            batch.draw(tavernBackground, 0, 0, TavernInteriorFactory.WIDTH, TavernInteriorFactory.HEIGHT);
+        }
+
         entities.sort((e1, e2) -> Float.compare(e2.getY(), e1.getY()));
         for (Entity entity : entities) {
             entity.render(batch);
         }
         CombatController.renderDamageTexts(batch, damageFont, damageTexts);
-
         endBatch();
 
         shapeRenderer.setProjectionMatrix(cameraController.getCamera().combined);
-        CombatController.renderHealthBars(shapeRenderer, entities);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (Entity entity : entities) {
+            if (entity instanceof MapDoor) {
+                ((MapDoor) entity).renderMarker(shapeRenderer);
+            }
+        }
+        shapeRenderer.end();
+
+        if (!inTavern) {
+            CombatController.renderHealthBars(shapeRenderer, entities);
+        }
 
         uiStage.act(delta);
         uiStage.draw();
@@ -207,12 +425,33 @@ public class GameScreen extends AbstractScreen {
             );
             if (revived) {
                 activeLootTarget = null;
+                panelStack.clear();
             }
+        }
+    }
+
+    private void syncUiInteractionLock() {
+        if (inventoryWindow.isVisible()
+            || equipmentWindow.isVisible()
+            || lootWindow.isVisible()
+            || craftingWindow.isVisible()
+            || dialogueWindow.isVisible()) {
+            player.setInteracting(true);
+        } else {
+            player.setInteracting(false);
         }
     }
 
     private void handleItemSystemInputs() {
         if (player.isDead()) return;
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (panelStack.closeTop()) {
+                syncUiInteractionLock();
+                return;
+            }
+            // No open windows — leave ESC alone (death screen handles exit).
+        }
 
         if (dialogueWindow.isVisible()) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
@@ -226,62 +465,61 @@ public class GameScreen extends AbstractScreen {
         if (craftingWindow.isVisible()) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
                 craftingWindow.close();
-                player.setInteracting(false);
-                activeInteractionTarget = null;
             }
             return;
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
             if (lootWindow.isVisible()) return;
+            if (inventoryWindow.isVisible()) {
+                inventoryWindow.closePanel();
+            } else {
+                inventoryWindow.openPanel();
+                panelStack.push(inventoryWindow);
+            }
+        }
 
-            boolean isVisible = !inventoryWindow.isVisible();
-            inventoryWindow.setVisible(isVisible);
-            if (isVisible) inventoryWindow.refresh();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+            if (lootWindow.isVisible() || craftingWindow.isVisible()) return;
+            if (equipmentWindow.isVisible()) {
+                equipmentWindow.closePanel();
+            } else {
+                equipmentWindow.openPanel();
+                panelStack.push(equipmentWindow);
+            }
+        }
+
+        if (inventoryWindow.isVisible() || equipmentWindow.isVisible()) {
+            if (equipmentWindow.isVisible()) {
+                equipmentWindow.refresh();
+            }
+            return;
         }
 
         if (!lootWindow.isVisible() && Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-            Interactable closestInteractable = null;
-            float minInteractDist = INTERACTION_RANGE;
-
-            for (Interactable inter : interactables) {
-                float dist = Vector2.dst(player.getX(), player.getY(), inter.getX(), inter.getY());
-                if (dist <= minInteractDist) {
-                    minInteractDist = dist;
-                    closestInteractable = inter;
-                }
-            }
+            Interactable closestInteractable = findNearestInteractable();
 
             if (closestInteractable != null) {
                 activeInteractionTarget = closestInteractable;
+                boolean isDoor = closestInteractable instanceof MapDoor;
                 closestInteractable.onInteract(player);
                 inventoryWindow.refresh();
-                player.setInteracting(true);
-                inventoryWindow.setVisible(false);
+                equipmentWindow.refresh();
+                if (!isDoor && (dialogueWindow.isVisible() || craftingWindow.isVisible())) {
+                    player.setInteracting(true);
+                }
                 return;
             }
 
-            Enemy closestCorpse = null;
-            float minCorpseDist = INTERACTION_RANGE;
-
-            for (Entity ent : entities) {
-                if (ent instanceof Enemy) {
-                    Enemy enemy = (Enemy) ent;
-                    if (enemy.hasLootAvailable()) {
-                        float dist = Vector2.dst(player.getX(), player.getY(), enemy.getX(), enemy.getY());
-                        if (dist <= minCorpseDist) {
-                            minCorpseDist = dist;
-                            closestCorpse = enemy;
-                        }
-                    }
-                }
+            if (inTavern) {
+                return;
             }
 
+            Enemy closestCorpse = findNearestLootableCorpse();
             if (closestCorpse != null) {
                 activeLootTarget = closestCorpse;
                 lootWindow.updateLoot(activeLootTarget);
                 lootWindow.setVisible(true);
-                inventoryWindow.setVisible(false);
                 player.setInteracting(true);
             }
         }
@@ -290,13 +528,77 @@ public class GameScreen extends AbstractScreen {
             for (ItemStack stack : activeLootTarget.getLootTable()) {
                 player.getInventory().addItem(stack.getDefinition(), stack.getQuantity());
             }
-
             inventoryWindow.refresh();
             activeLootTarget.clearLoot();
             lootWindow.setVisible(false);
             activeLootTarget = null;
             player.setInteracting(false);
         }
+    }
+
+    private Interactable findNearestInteractable() {
+        Interactable closest = null;
+        float minDist = INTERACTION_RANGE;
+        for (Interactable inter : interactables) {
+            float dist = Vector2.dst(player.getX(), player.getY(), inter.getX(), inter.getY());
+            if (dist <= minDist) {
+                minDist = dist;
+                closest = inter;
+            }
+        }
+        return closest;
+    }
+
+    private Enemy findNearestLootableCorpse() {
+        Enemy closest = null;
+        float minDist = INTERACTION_RANGE;
+        for (Entity ent : entities) {
+            if (ent instanceof Enemy) {
+                Enemy enemy = (Enemy) ent;
+                if (enemy.hasLootAvailable()) {
+                    float dist = Vector2.dst(player.getX(), player.getY(), enemy.getX(), enemy.getY());
+                    if (dist <= minDist) {
+                        minDist = dist;
+                        closest = enemy;
+                    }
+                }
+            }
+        }
+        return closest;
+    }
+
+    /** Highlights the same nearest ore/corpse that E would target. */
+    private void updateInteractionTargetFeedback(float delta) {
+        for (Entity e : entities) {
+            if (e instanceof OreNode) {
+                ((OreNode) e).setInteractionTargeted(false);
+            } else if (e instanceof Enemy) {
+                ((Enemy) e).setInteractionHighlighted(false);
+            }
+        }
+        highlightedLootCorpse = null;
+
+        boolean uiBlocks = player.isDead()
+            || inventoryWindow.isVisible()
+            || equipmentWindow.isVisible()
+            || craftingWindow.isVisible()
+            || dialogueWindow.isVisible()
+            || lootWindow.isVisible();
+
+        if (!uiBlocks) {
+            Interactable nearest = findNearestInteractable();
+            if (nearest instanceof OreNode) {
+                ((OreNode) nearest).setInteractionTargeted(true);
+            } else if (!inTavern && nearest == null) {
+                Enemy corpse = findNearestLootableCorpse();
+                if (corpse != null) {
+                    corpse.setInteractionHighlighted(true);
+                    highlightedLootCorpse = corpse;
+                }
+            }
+        }
+        // OreNode.update (incl. respawn timer + pulse) runs via CombatController.updateEntities
+        // while in the overworld — do not double-tick here or respawn fires at half duration.
     }
 
     private void renderDebugCollision() {
@@ -325,20 +627,21 @@ public class GameScreen extends AbstractScreen {
         }
         if (uiStage != null) {
             uiStage.getViewport().update(width, height, true);
-
             if (inventoryWindow != null) {
-                inventoryWindow.setPosition(20, height / 2f, Align.topLeft);
+                inventoryWindow.clampToStage(width, height);
             }
-
+            if (equipmentWindow != null) {
+                equipmentWindow.clampToStage(width, height);
+            }
+            if (craftingWindow != null && craftingWindow.isVisible()) {
+                craftingWindow.clampToStage(width, height);
+            }
             if (lootWindow != null) {
                 lootWindow.setPosition(width / 2f, height / 2f + 100, Align.center);
             }
         }
         if (dialogueWindow != null) {
-            dialogueWindow.setPosition(width / 2f, 50, Align.bottom);
-        }
-        if (craftingWindow != null) {
-            craftingWindow.setPosition(width / 2f, height / 2f, Align.center);
+            dialogueWindow.setPosition(width / 2f, 60, Align.bottom);
         }
     }
 
@@ -365,15 +668,23 @@ public class GameScreen extends AbstractScreen {
             entity.dispose();
         }
         entities.clear();
+        if (suspendedOverworld != null) {
+            for (Entity entity : suspendedOverworld.entities) {
+                entity.dispose();
+            }
+        }
         if (damageFont != null) damageFont.dispose();
+        if (uiFont != null) uiFont.dispose();
         if (proceduralMap) {
             DungeonMapAdapter.disposeProceduralResources(map);
+        } else if (inTavern && map != null) {
+            map.dispose();
         }
         if (mapRenderer != null) mapRenderer.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
     }
 
-    private LevelData loadLevelData() {
+    private LevelData loadOverworldLevelData() {
         if (GameConfig.USE_PROCEDURAL_DUNGEON) {
             this.dungeonMap = DungeonGenerator.generate(DungeonGenerationConfig.defaults());
             return DungeonMapAdapter.toLevelData(this.dungeonMap, game.getAssetManager());

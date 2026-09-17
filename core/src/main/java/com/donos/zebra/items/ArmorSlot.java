@@ -7,5 +7,6 @@ public enum ArmorSlot {
     NONE,
     HELMET,
     CHESTPLATE,
+    GLOVES,
     BOOTS
 }

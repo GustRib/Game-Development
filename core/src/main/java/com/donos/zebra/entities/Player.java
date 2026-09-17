@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.world.LevelConstants;
+import com.donos.zebra.items.ArmorSlot;
 import com.donos.zebra.items.Inventory;
 import com.donos.zebra.items.ItemDefinition;
 import com.donos.zebra.items.ItemRegistry;
@@ -58,6 +59,7 @@ public class Player implements Entity {
     private ItemDefinition equippedWeapon = null;
     private ItemDefinition equippedHelmet = null;
     private ItemDefinition equippedChestplate = null;
+    private ItemDefinition equippedGloves = null;
     private ItemDefinition equippedBoots = null;
 
     public Player() {
@@ -320,7 +322,12 @@ public class Player implements Entity {
      */
     public void grantFirstSword() {
         this.hasFirstSword = true;
-        equipWeapon(ItemRegistry.IRON_SWORD);
+        if (inventory.getItemCount(ItemRegistry.IRON_SWORD) > 0) {
+            equipFromInventory(ItemRegistry.IRON_SWORD);
+        } else {
+            inventory.addItem(ItemRegistry.IRON_SWORD, 1);
+            equipFromInventory(ItemRegistry.IRON_SWORD);
+        }
     }
 
     public boolean hasWeaponEquipped() {
@@ -339,6 +346,10 @@ public class Player implements Entity {
         return equippedChestplate;
     }
 
+    public ItemDefinition getEquippedGloves() {
+        return equippedGloves;
+    }
+
     public ItemDefinition getEquippedBoots() {
         return equippedBoots;
     }
@@ -351,6 +362,7 @@ public class Player implements Entity {
     public float getDefense() {
         return slotDefense(equippedHelmet)
             + slotDefense(equippedChestplate)
+            + slotDefense(equippedGloves)
             + slotDefense(equippedBoots);
     }
 
@@ -381,6 +393,9 @@ public class Player implements Entity {
             case CHESTPLATE:
                 equippedChestplate = armor;
                 break;
+            case GLOVES:
+                equippedGloves = armor;
+                break;
             case BOOTS:
                 equippedBoots = armor;
                 break;
@@ -390,17 +405,117 @@ public class Player implements Entity {
         }
     }
 
+    public ItemDefinition unequipWeapon() {
+        ItemDefinition previous = equippedWeapon;
+        equippedWeapon = null;
+        return previous;
+    }
+
+    public ItemDefinition unequipArmorSlot(ArmorSlot slot) {
+        ItemDefinition previous = null;
+        switch (slot) {
+            case HELMET:
+                previous = equippedHelmet;
+                equippedHelmet = null;
+                break;
+            case CHESTPLATE:
+                previous = equippedChestplate;
+                equippedChestplate = null;
+                break;
+            case GLOVES:
+                previous = equippedGloves;
+                equippedGloves = null;
+                break;
+            case BOOTS:
+                previous = equippedBoots;
+                equippedBoots = null;
+                break;
+            default:
+                break;
+        }
+        return previous;
+    }
+
+    /**
+     * Unequips a piece and returns it to inventory (right-click from equipment panel).
+     */
+    public boolean unequipToInventory(ItemDefinition equipped) {
+        if (equipped == null) {
+            return false;
+        }
+        ItemDefinition removed = null;
+        if (equipped.getType() == ItemType.WEAPON && equipped.equals(equippedWeapon)) {
+            removed = unequipWeapon();
+        } else if (equipped.getType() == ItemType.ARMOR) {
+            removed = unequipArmorSlot(equipped.getArmorSlot());
+        }
+        if (removed == null) {
+            return false;
+        }
+        inventory.addItem(removed, 1);
+        return true;
+    }
+
     /**
      * Auto-equip after a successful craft at the station.
+     * Craft already inserted the item into inventory; remove that copy while equipped.
      */
     public void equipCrafted(ItemDefinition item) {
         if (item == null) {
             return;
         }
-        if (item.getType() == ItemType.WEAPON) {
-            equipWeapon(item);
-        } else if (item.getType() == ItemType.ARMOR) {
-            equipArmor(item);
+        equipFromInventory(item);
+    }
+
+    /**
+     * Equip from inventory (right-click in I). Removes the equipped copy from inventory
+     * and returns any previously equipped piece to inventory.
+     */
+    public boolean equipFromInventory(ItemDefinition item) {
+        if (item == null) {
+            return false;
         }
+        if (inventory.getItemCount(item) <= 0) {
+            return false;
+        }
+        if (item.getType() == ItemType.WEAPON) {
+            ItemDefinition previous = equippedWeapon;
+            if (!inventory.removeItem(item, 1)) {
+                return false;
+            }
+            equipWeapon(item);
+            if (previous != null && previous != item) {
+                inventory.addItem(previous, 1);
+            }
+            return true;
+        }
+        if (item.getType() == ItemType.ARMOR && item.getArmorSlot() != ArmorSlot.NONE) {
+            ItemDefinition previous;
+            switch (item.getArmorSlot()) {
+                case HELMET:
+                    previous = equippedHelmet;
+                    break;
+                case CHESTPLATE:
+                    previous = equippedChestplate;
+                    break;
+                case GLOVES:
+                    previous = equippedGloves;
+                    break;
+                case BOOTS:
+                    previous = equippedBoots;
+                    break;
+                default:
+                    return false;
+            }
+            if (!inventory.removeItem(item, 1)) {
+                return false;
+            }
+            equipArmor(item);
+            if (previous != null && previous != item) {
+                inventory.addItem(previous, 1);
+            }
+            return true;
+        }
+        return false;
     }
 }

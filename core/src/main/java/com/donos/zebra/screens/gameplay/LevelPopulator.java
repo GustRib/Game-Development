@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.Interaction.Interactable;
 import com.donos.zebra.entities.CraftingStation;
+import com.donos.zebra.entities.MapDoor;
 import com.donos.zebra.entities.MentorAnimationLoader;
 import com.donos.zebra.entities.MentorNpc;
 import com.donos.zebra.entities.Orc;
@@ -64,8 +65,12 @@ public final class LevelPopulator {
                 }
             }
         } else {
+            // Village map: two near spawn + three in the southeast for farming loops.
             spawns.add(new Vector2(playerSpawnX + 60f, playerSpawnY + 60f));
             spawns.add(new Vector2(playerSpawnX + 120f, playerSpawnY - 40f));
+            spawns.add(new Vector2(650f, 150f));
+            spawns.add(new Vector2(700f, 200f));
+            spawns.add(new Vector2(620f, 80f));
         }
         return spawns;
     }
@@ -126,14 +131,44 @@ public final class LevelPopulator {
             return null;
         }
 
-        Texture texture = assetManager.get(ItemRegistry.STONE_PICKAXE.getIconPath(), Texture.class);
         CraftingStation station = new CraftingStation(
-            levelData.craftingStationX, levelData.craftingStationY, texture, craftingUI);
+            levelData.craftingStationX, levelData.craftingStationY, craftingUI);
         interactables.add(station);
         entities.add(station);
         if (collisionPolygons != null) {
             collisionPolygons.add(station.getCollisionPolygon());
         }
         return station;
+    }
+
+    public static MapDoor addDoorHouse(LevelData levelData,
+                                       List<Interactable> interactables,
+                                       List<? super MapDoor> entities,
+                                       MapDoor.Transition transition) {
+        if (!levelData.hasDoorHouse) {
+            return null;
+        }
+        // Match TMX DoorHouse rect (12x16 door plate on village house facade)
+        MapDoor door = new MapDoor(
+            levelData.doorHouseX, levelData.doorHouseY, 12f, 16f,
+            "[E] Entrar", transition);
+        interactables.add(door);
+        entities.add(door);
+        return door;
+    }
+
+    public static MapDoor addDoorExit(LevelData levelData,
+                                      List<Interactable> interactables,
+                                      List<? super MapDoor> entities,
+                                      MapDoor.Transition transition) {
+        if (!levelData.hasDoorExit) {
+            return null;
+        }
+        MapDoor door = new MapDoor(
+            levelData.doorExitX, levelData.doorExitY, 32f, 18f,
+            "[E] Sair", transition);
+        interactables.add(door);
+        entities.add(door);
+        return door;
     }
 }
