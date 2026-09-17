@@ -15,6 +15,7 @@ public class MentorNpc implements Entity, Interactable {
     private final float radius = 26f;
     private boolean gavePickaxe = false;
     private final DialogueUI dialogueUI;
+    private Runnable openShop;
 
     private final java.util.Map<String, Animation<TextureRegion>[]> animations;
     private float stateTime = 0f;
@@ -30,6 +31,10 @@ public class MentorNpc implements Entity, Interactable {
 
         this.dummyHitbox = new Polygon(new float[]{0, 0, 16, 0, 16, 16, 0, 16});
         this.dummyHitbox.setPosition(x - 8f, y);
+    }
+
+    public void setOpenShop(Runnable openShop) {
+        this.openShop = openShop;
     }
 
     public boolean hasGavePickaxe() {
@@ -110,10 +115,15 @@ public class MentorNpc implements Entity, Interactable {
         }
 
         if (player.hasFirstSword()) {
-            dialogueUI.showText(
-                "Mentor: A vila precisa de voce.\n"
-                    + "Nao deixe a corrupcao se espalhar!"
-            );
+            if (openShop != null) {
+                dialogueUI.hideDialogue();
+                openShop.run();
+            } else {
+                dialogueUI.showText(
+                    "Mentor: A vila precisa de voce.\n"
+                        + "Nao deixe a corrupcao se espalhar!"
+                );
+            }
             return;
         }
 

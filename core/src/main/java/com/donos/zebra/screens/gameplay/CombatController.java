@@ -53,6 +53,15 @@ public final class CombatController {
         if (player.isInteracting()) {
             return;
         }
+
+        // Shared gate: unarmed click never starts the attack anim (Player.update);
+        // surface the same warning here so feedback stays in one combat path.
+        if (player.consumeUnarmedAttackFeedback()) {
+            damageTexts.add(new DamageText(
+                player.getX(), player.getY() + 18f, "Precisa de uma arma!", Color.YELLOW));
+            return;
+        }
+
         if (!player.getCurrentAnimationKey().equals(AnimationConstants.ANIM_ATTACK)) {
             return;
         }

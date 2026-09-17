@@ -29,7 +29,7 @@ class OrcRespawnTest {
         assertEquals(10f, orc.getX(), 0.01f);
         assertEquals(20f, orc.getY(), 0.01f);
         assertFalse(orc.isLooted());
-        assertEquals(2, orc.getLootTable().size());
+        assertEquals(1, orc.getLootTable().size());
 
         // Loot is only "available" while dead; confirm the replenished table is lootable on next death.
         orc.takeDamage(999f);

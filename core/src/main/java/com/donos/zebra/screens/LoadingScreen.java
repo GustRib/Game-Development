@@ -49,7 +49,13 @@ public class LoadingScreen extends AbstractScreen {
         assetManager.load("items/copper_chestplate.png", Texture.class);
         assetManager.load("items/copper_gloves.png", Texture.class);
         assetManager.load("items/copper_boots.png", Texture.class);
+        assetManager.load("items/small_health_potion.png", Texture.class);
+        assetManager.load("items/medium_health_potion.png", Texture.class);
+        assetManager.load("items/big_health_potion.png", Texture.class);
+        assetManager.load("items/silver_coin.png", Texture.class);
+        assetManager.load("items/gold_coin.png", Texture.class);
         assetManager.load(LevelConstants.TAVERN_BACKGROUND, Texture.class);
+        assetManager.load(com.donos.zebra.entities.CraftingStation.FORGE_TEXTURE_PATH, Texture.class);
 
         MentorAnimationLoader.queueAssets(assetManager);
         PlayerAnimationLoader.queueAssets(assetManager);

@@ -12,7 +12,10 @@ import com.donos.zebra.items.ArmorSlot;
 import com.donos.zebra.items.Inventory;
 import com.donos.zebra.items.ItemDefinition;
 import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.items.ItemStack;
 import com.donos.zebra.items.ItemType;
+import com.donos.zebra.items.PotionRules;
+import com.donos.zebra.items.Wallet;
 import com.donos.zebra.util.CollisionMovement;
 
 import java.util.Map;
@@ -44,6 +47,7 @@ public class Player implements Entity {
     private float offsetY = 0f;
 
     private boolean isAttacking = false;
+    private boolean unarmedAttackFeedbackPending = false;
     private Direction lastDirection = Direction.DOWN;
 
     private Polygon hitbox;
@@ -54,6 +58,7 @@ public class Player implements Entity {
 
     // --- SISTEMA DE ITENS ---
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
+    private final Wallet wallet = new Wallet();
     private boolean isInteracting = false;
     private boolean hasFirstSword = false;
     private ItemDefinition equippedWeapon = null;
@@ -61,6 +66,9 @@ public class Player implements Entity {
     private ItemDefinition equippedChestplate = null;
     private ItemDefinition equippedGloves = null;
     private ItemDefinition equippedBoots = null;
+    /** Quick-use potion stack (P slot); null if empty. */
+    private ItemStack potionSlot;
+    private float potionCooldownRemaining;
 
     public Player() {
         this(new PlayerInput());
@@ -122,6 +130,10 @@ public class Player implements Entity {
     }
 
     public void update(float delta, Array<Polygon> collisionPolygons) {
+        if (potionCooldownRemaining > 0f) {
+            potionCooldownRemaining = Math.max(0f, potionCooldownRemaining - delta);
+        }
+
         if (isDead) {
             setCurrentAnimation("death");
             updateAnimation(delta);
@@ -143,9 +155,13 @@ public class Player implements Entity {
             currentDirection = input.getIntendedDirection();
 
             if (input.isAttacking()) {
-                isAttacking = true;
-                stateTime = 0f;
-                setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
+                if (hasWeaponEquipped()) {
+                    isAttacking = true;
+                    stateTime = 0f;
+                    setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
+                } else {
+                    unarmedAttackFeedbackPending = true;
+                }
             }
         }
 
@@ -299,6 +315,120 @@ public class Player implements Entity {
         return inventory;
     }
 
+    public Wallet getWallet() {
+        return wallet;
+    }
+
+    /**
+     * Heals up to max HP. Returns actual HP restored (0 if dead or already full).
+     */
+    public float heal(float amount) {
+        if (isDead || amount <= 0f) {
+            return 0f;
+        }
+        float before = currentHealth;
+        currentHealth = Math.min(getMaxHealth(), currentHealth + amount);
+        return currentHealth - before;
+    }
+
+    public boolean isAtFullHealth() {
+        return currentHealth >= getMaxHealth();
+    }
+
+    public ItemStack getPotionSlot() {
+        return potionSlot;
+    }
+
+    public float getPotionCooldownRemaining() {
+        return potionCooldownRemaining;
+    }
+
+    public boolean isPotionOnCooldown() {
+        return potionCooldownRemaining > 0f;
+    }
+
+    /**
+     * Moves the inventory stack at {@code slotIndex} into the Poção belt slot (swap-on-replace).
+     * Does not start potion cooldown.
+     */
+    public boolean movePotionStackToSlot(int slotIndex) {
+        ItemStack stack = inventory.getStackAt(slotIndex);
+        if (stack == null || !PotionRules.isPotion(stack.getDefinition())) {
+            return false;
+        }
+        ItemStack taken = inventory.takeStackAt(slotIndex);
+        if (taken == null) {
+            return false;
+        }
+        ItemStack previous = potionSlot;
+        potionSlot = taken;
+        if (previous != null) {
+            inventory.addItem(previous.getDefinition(), previous.getQuantity());
+        }
+        return true;
+    }
+
+    /** Returns the potion belt stack to inventory (right-click from P). */
+    public boolean unequipPotionSlotToInventory() {
+        if (potionSlot == null) {
+            return false;
+        }
+        ItemStack previous = potionSlot;
+        potionSlot = null;
+        return inventory.addItem(previous.getDefinition(), previous.getQuantity());
+    }
+
+    /** Quick-use (H): consume one from the Poção slot. */
+    public PotionRules.Result tryUsePotionFromSlot() {
+        if (potionSlot == null || potionSlot.isEmpty()) {
+            return PotionRules.Result.NO_POTION;
+        }
+        PotionRules.Result gate = gatePotionUse();
+        if (gate != null) {
+            return gate;
+        }
+        ItemDefinition def = potionSlot.getDefinition();
+        applyPotionHeal(def);
+        if (potionSlot.getQuantity() <= 1) {
+            potionSlot = null;
+        } else {
+            potionSlot.remove(1);
+        }
+        potionCooldownRemaining = PotionRules.COOLDOWN_SECONDS;
+        return PotionRules.Result.OK;
+    }
+
+    /** Inventory "Usar": consume one from a specific inventory slot. */
+    public PotionRules.Result tryUsePotionFromInventory(int slotIndex) {
+        ItemStack stack = inventory.getStackAt(slotIndex);
+        if (stack == null || !PotionRules.isPotion(stack.getDefinition())) {
+            return PotionRules.Result.NO_POTION;
+        }
+        PotionRules.Result gate = gatePotionUse();
+        if (gate != null) {
+            return gate;
+        }
+        ItemDefinition def = stack.getDefinition();
+        applyPotionHeal(def);
+        inventory.removeOneAt(slotIndex);
+        potionCooldownRemaining = PotionRules.COOLDOWN_SECONDS;
+        return PotionRules.Result.OK;
+    }
+
+    private PotionRules.Result gatePotionUse() {
+        if (potionCooldownRemaining > 0f) {
+            return PotionRules.Result.ON_COOLDOWN;
+        }
+        if (isAtFullHealth()) {
+            return PotionRules.Result.FULL_HP;
+        }
+        return null;
+    }
+
+    private void applyPotionHeal(ItemDefinition potion) {
+        heal(potion.getHealAmount());
+    }
+
     /**
      * Define se o jogador está com uma janela de interação aberta (congelando movimentos).
      */
@@ -332,6 +462,18 @@ public class Player implements Entity {
 
     public boolean hasWeaponEquipped() {
         return equippedWeapon != null;
+    }
+
+    /**
+     * True once after an unarmed attack input was blocked (no animation started).
+     * Consumed by combat feedback so the warning appears without playing the swing.
+     */
+    public boolean consumeUnarmedAttackFeedback() {
+        if (!unarmedAttackFeedbackPending) {
+            return false;
+        }
+        unarmedAttackFeedbackPending = false;
+        return true;
     }
 
     public ItemDefinition getEquippedWeapon() {

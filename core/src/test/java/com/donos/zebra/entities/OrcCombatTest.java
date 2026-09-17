@@ -47,13 +47,11 @@ class OrcCombatTest {
 
         assertTrue(orc.isDead());
         assertTrue(orc.hasLootAvailable());
-        assertEquals(2, orc.getLootTable().size());
-        assertEquals(ItemRegistry.COPPER_ORE.getId(), orc.getLootTable().get(0).getDefinition().getId());
-        int copperQty = orc.getLootTable().get(0).getQuantity();
-        assertTrue(copperQty >= OrcLootRolls.MIN_QTY && copperQty <= OrcLootRolls.MAX_QTY);
-        assertEquals(ItemRegistry.IRON_ORE.getId(), orc.getLootTable().get(1).getDefinition().getId());
-        int ironQty = orc.getLootTable().get(1).getQuantity();
+        assertEquals(1, orc.getLootTable().size());
+        assertEquals(ItemRegistry.IRON_ORE.getId(), orc.getLootTable().get(0).getDefinition().getId());
+        int ironQty = orc.getLootTable().get(0).getQuantity();
         assertTrue(ironQty >= OrcLootRolls.MIN_QTY && ironQty <= OrcLootRolls.MAX_QTY);
+        assertTrue(orc.getSilverLoot() >= OrcLootRolls.MIN_SILVER && orc.getSilverLoot() <= OrcLootRolls.MAX_SILVER);
 
         orc.clearLoot();
         assertFalse(orc.hasLootAvailable());

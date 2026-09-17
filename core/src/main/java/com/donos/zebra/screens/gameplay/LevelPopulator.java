@@ -132,7 +132,12 @@ public final class LevelPopulator {
         }
 
         CraftingStation station = new CraftingStation(
-            levelData.craftingStationX, levelData.craftingStationY, craftingUI);
+            levelData.craftingStationX,
+            levelData.craftingStationY,
+            assetManager.isLoaded(CraftingStation.FORGE_TEXTURE_PATH)
+                ? assetManager.get(CraftingStation.FORGE_TEXTURE_PATH, Texture.class)
+                : null,
+            craftingUI);
         interactables.add(station);
         entities.add(station);
         if (collisionPolygons != null) {

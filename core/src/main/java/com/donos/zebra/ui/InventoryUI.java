@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -23,6 +24,7 @@ import com.donos.zebra.entities.Player;
 import com.donos.zebra.items.Inventory;
 import com.donos.zebra.items.ItemDefinition;
 import com.donos.zebra.items.ItemStack;
+import com.donos.zebra.items.PotionRules;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,10 +38,13 @@ public class InventoryUI extends GameWindow {
     private final Player player;
     private final Table slotGrid;
     private final ScrollPane scrollPane;
+    private final CurrencyReadout currencyReadout;
     private final List<InventorySlotActor> slots = new ArrayList<>();
     private ItemTooltipPanel tooltipPanel;
+    private ItemContextMenu contextMenu;
     private Runnable onEquipmentChanged;
     private java.util.function.Consumer<String> equipToast;
+    private java.util.function.Consumer<String> statusToast;
     private int currentColumns = 4;
 
     public InventoryUI(Inventory backendInventory, Skin skin, AssetManager assetManager) {
@@ -56,12 +61,14 @@ public class InventoryUI extends GameWindow {
 
         setResizable(true);
 
+        currencyReadout = new CurrencyReadout(skin, assetManager);
+
         slotGrid = new Table();
         slotGrid.top().left().pad(4);
         for (int i = 0; i < 16; i++) {
             InventorySlotActor slotActor = new InventorySlotActor(i, skin, assetManager);
             configurarDragAndDrop(slotActor);
-            configurarRightClickEquip(slotActor);
+            configurarRightClick(slotActor);
             slots.add(slotActor);
         }
         layoutSlotGrid(4);
@@ -69,8 +76,12 @@ public class InventoryUI extends GameWindow {
         scrollPane = new ScrollPane(slotGrid, skin);
         scrollPane.setFadeScrollBars(false);
         scrollPane.setScrollingDisabled(false, false);
-        add(scrollPane).grow();
-        setSize(280, 320);
+
+        Table body = new Table();
+        body.add(currencyReadout).growX().pad(4).row();
+        body.add(scrollPane).grow().row();
+        add(body).grow();
+        setSize(280, 340);
     }
 
     @Override
@@ -107,6 +118,10 @@ public class InventoryUI extends GameWindow {
         this.equipToast = equipToast;
     }
 
+    public void setStatusToast(java.util.function.Consumer<String> statusToast) {
+        this.statusToast = statusToast;
+    }
+
     public void setTooltipPanel(ItemTooltipPanel tooltipPanel) {
         this.tooltipPanel = tooltipPanel;
         for (InventorySlotActor slot : slots) {
@@ -115,6 +130,9 @@ public class InventoryUI extends GameWindow {
     }
 
     public void refresh() {
+        if (player != null) {
+            currencyReadout.refresh(player.getWallet());
+        }
         for (InventorySlotActor slotActor : slots) {
             int index = slotActor.getSlotIndex();
             ItemStack stack = backendInventory.getStackAt(index);
@@ -134,17 +152,69 @@ public class InventoryUI extends GameWindow {
         refresh();
     }
 
-    private void configurarRightClickEquip(InventorySlotActor slot) {
+    private void configurarRightClick(InventorySlotActor slot) {
         slot.addListener(new ClickListener() {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
                 if (button == 1 && player != null && !slot.isEmpty()) {
-                    equipFromInventory(slot.getItem());
+                    ItemDefinition item = slot.getItem();
+                    if (PotionRules.isPotion(item)) {
+                        showPotionMenu(slot, event.getStageX(), event.getStageY());
+                    } else {
+                        hideContextMenu();
+                        equipFromInventory(item);
+                    }
                     return true;
                 }
                 return false;
             }
         });
+    }
+
+    private void showPotionMenu(InventorySlotActor slot, float stageX, float stageY) {
+        if (getStage() == null) {
+            return;
+        }
+        if (contextMenu == null) {
+            contextMenu = new ItemContextMenu(skin);
+            getStage().addActor(contextMenu);
+        }
+        final int index = slot.getSlotIndex();
+        contextMenu.show(getStage(), stageX, stageY, new ItemContextMenu.Listener() {
+            @Override
+            public void onUse() {
+                ItemStack before = backendInventory.getStackAt(index);
+                int heal = before != null ? before.getDefinition().getHealAmount() : 0;
+                PotionRules.Result result = player.tryUsePotionFromInventory(index);
+                refresh();
+                if (onEquipmentChanged != null) {
+                    onEquipmentChanged.run();
+                }
+                if (statusToast != null) {
+                    if (result == PotionRules.Result.OK) {
+                        statusToast.accept("+" + heal + " HP");
+                    } else {
+                        statusToast.accept(PotionRules.feedback(result, player.getPotionCooldownRemaining()));
+                    }
+                }
+            }
+
+            @Override
+            public void onMoveToCharacter() {
+                if (player.movePotionStackToSlot(index)) {
+                    refresh();
+                    if (onEquipmentChanged != null) {
+                        onEquipmentChanged.run();
+                    }
+                }
+            }
+        });
+    }
+
+    public void hideContextMenu() {
+        if (contextMenu != null) {
+            contextMenu.hide();
+        }
     }
 
     private void equipFromInventory(ItemDefinition item) {

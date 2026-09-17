@@ -168,4 +168,31 @@ public class Inventory {
         slots[indexA] = slots[indexB];
         slots[indexB] = temp;
     }
+
+    /** Removes and returns the entire stack at {@code index}, or null if empty/invalid. */
+    public ItemStack takeStackAt(int index) {
+        if (index < 0 || index >= slots.length) {
+            return null;
+        }
+        ItemStack stack = slots[index];
+        slots[index] = null;
+        return stack;
+    }
+
+    /**
+     * Removes one unit from the stack at {@code index}. Clears the slot if quantity hits 0.
+     * @return false if the slot is empty or invalid
+     */
+    public boolean removeOneAt(int index) {
+        if (index < 0 || index >= slots.length || slots[index] == null) {
+            return false;
+        }
+        ItemStack stack = slots[index];
+        if (stack.getQuantity() <= 1) {
+            slots[index] = null;
+            return true;
+        }
+        stack.remove(1);
+        return true;
+    }
 }

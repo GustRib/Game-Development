@@ -60,7 +60,7 @@ public class Orc extends Enemy {
         this.hitbox.setPosition(x, y);
         setHitboxLocalVertices(vertices);
 
-        OrcLootRolls.fillDefaultOrcLoot(this.lootTable, this.lootRandom);
+        this.silverLoot = OrcLootRolls.fillDefaultOrcLoot(this.lootTable, this.lootRandom);
     }
 
     public float getDeathTimer() {
@@ -167,7 +167,7 @@ public class Orc extends Enemy {
         if (animations != null && animations.containsKey(AnimationConstants.ANIM_IDLE)) {
             currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
         }
-        OrcLootRolls.fillDefaultOrcLoot(lootTable, lootRandom);
+        silverLoot = OrcLootRolls.fillDefaultOrcLoot(lootTable, lootRandom);
     }
 
     @Override

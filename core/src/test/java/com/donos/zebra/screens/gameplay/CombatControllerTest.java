@@ -44,13 +44,14 @@ class CombatControllerTest {
     }
 
     @Test
-    void meleeWithoutSwordDoesNotDealDamage() {
+    void meleeWithoutSwordDoesNotDealDamageOrPlayAttackAnim() {
         StubPlayerInput input = new StubPlayerInput();
         input.pressAttack();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.setPosition(100f, 100f);
         player.update(0.016f, new Array<>());
         assertFalse(player.hasFirstSword());
+        assertFalse(player.getCurrentAnimationKey().equals(AnimationConstants.ANIM_ATTACK));
 
         Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
         List<Entity> entities = new ArrayList<>();

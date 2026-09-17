@@ -52,6 +52,11 @@ public class LootUI extends Table {
             Stack slotStack = createSlot(stack);
             grid.add(slotStack).size(40, 40).pad(2);
         }
+
+        if (enemy.getSilverLoot() > 0) {
+            Stack silverSlot = createSilverSlot(enemy.getSilverLoot());
+            grid.add(silverSlot).size(40, 40).pad(2);
+        }
         
         this.add(grid).row();
         
@@ -60,6 +65,19 @@ public class LootUI extends Table {
         this.add(help).padTop(10);
         
         this.pack();
+    }
+
+    private Stack createSilverSlot(int amount) {
+        Stack stackGroup = new Stack();
+        stackGroup.add(new Image(slotBackground));
+        String path = "items/silver_coin.png";
+        if (assetManager.isLoaded(path)) {
+            stackGroup.add(new Image(assetManager.get(path, Texture.class)));
+        }
+        Label qty = new Label(String.valueOf(amount), skin);
+        qty.setAlignment(Align.bottomRight);
+        stackGroup.add(qty);
+        return stackGroup;
     }
 
     private Stack createSlot(ItemStack stack) {

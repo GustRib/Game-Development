@@ -26,9 +26,13 @@ import com.donos.zebra.entities.Enemy;
 import com.donos.zebra.entities.Entity;
 import com.donos.zebra.entities.MapDoor;
 import com.donos.zebra.entities.Player;
+import com.donos.zebra.entities.CraftingStation;
 import com.donos.zebra.entities.DamageText;
+import com.donos.zebra.entities.MentorNpc;
+import com.donos.zebra.entities.OreNode;
 import com.donos.zebra.items.CraftingController;
 import com.donos.zebra.items.ItemStack;
+import com.donos.zebra.items.PotionRules;
 import com.donos.zebra.screens.gameplay.CombatController;
 import com.donos.zebra.screens.gameplay.LevelPopulator;
 import com.donos.zebra.screens.gameplay.PlayerDeathHandler;
@@ -39,9 +43,9 @@ import com.donos.zebra.ui.EquipmentUI;
 import com.donos.zebra.ui.InventoryUI;
 import com.donos.zebra.ui.ItemTooltipPanel;
 import com.donos.zebra.ui.LootUI;
+import com.donos.zebra.ui.ShopUI;
 import com.donos.zebra.ui.StatusToast;
 import com.donos.zebra.ui.UiPanelStack;
-import com.donos.zebra.entities.OreNode;
 import com.donos.zebra.world.CameraController;
 import com.donos.zebra.world.DungeonMapAdapter;
 import com.donos.zebra.world.LevelConstants;
@@ -103,6 +107,7 @@ public class GameScreen extends AbstractScreen {
 
     private DialogueUI dialogueWindow;
     private CraftingUI craftingWindow;
+    private ShopUI shopWindow;
     private final CraftingController craftingController = new CraftingController();
     private StatusToast statusToast;
     private final List<Interactable> interactables = new ArrayList<>();
@@ -151,14 +156,10 @@ public class GameScreen extends AbstractScreen {
 
         inventoryWindow.setOnEquipmentChanged(equipmentWindow::refresh);
         equipmentWindow.setOnInventoryChanged(inventoryWindow::refresh);
-        inventoryWindow.setEquipToast(msg -> {
-            statusToast.show(msg);
-            statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
-        });
-        equipmentWindow.setEquipToast(msg -> {
-            statusToast.show(msg);
-            statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
-        });
+        java.util.function.Consumer<String> toast = this::showStatusToast;
+        inventoryWindow.setEquipToast(toast);
+        equipmentWindow.setEquipToast(toast);
+        inventoryWindow.setStatusToast(toast);
 
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(uiStage);
@@ -186,6 +187,21 @@ public class GameScreen extends AbstractScreen {
             equipmentWindow.refresh();
         });
         uiStage.addActor(craftingWindow);
+
+        shopWindow = new ShopUI(uiSkin, game.getAssetManager());
+        shopWindow.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center);
+        shopWindow.setOnOpened(() -> panelStack.push(shopWindow));
+        shopWindow.setOnClosed(() -> {
+            panelStack.remove(shopWindow);
+            player.setInteracting(false);
+            activeInteractionTarget = null;
+        });
+        shopWindow.setOnInventoryChanged(() -> {
+            inventoryWindow.refresh();
+            equipmentWindow.refresh();
+        });
+        shopWindow.setToast(toast);
+        uiStage.addActor(shopWindow);
 
         if (game.getAssetManager().isLoaded(LevelConstants.TAVERN_BACKGROUND)) {
             tavernBackground = game.getAssetManager().get(LevelConstants.TAVERN_BACKGROUND, Texture.class);
@@ -226,7 +242,14 @@ public class GameScreen extends AbstractScreen {
         entities.add(player);
         damageTexts.clear();
 
-        LevelPopulator.addMentor(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        MentorNpc mentor = LevelPopulator.addMentor(
+            levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        if (mentor != null) {
+            mentor.setOpenShop(() -> {
+                shopWindow.open(player);
+                player.setInteracting(true);
+            });
+        }
         LevelPopulator.addOreNodes(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
         wireOreNodeFonts();
         LevelPopulator.addDoorHouse(levelData, interactables, entities, p -> enterTavern());
@@ -248,6 +271,7 @@ public class GameScreen extends AbstractScreen {
         player.setInteracting(false);
         activeInteractionTarget = null;
         if (craftingWindow != null) craftingWindow.close();
+        if (shopWindow != null) shopWindow.closePanel();
         if (dialogueWindow != null) dialogueWindow.hideDialogue();
 
         // Park live overworld — do NOT dispose orcs/ore/mentor
@@ -289,6 +313,7 @@ public class GameScreen extends AbstractScreen {
         player.setInteracting(false);
         activeInteractionTarget = null;
         if (craftingWindow != null) craftingWindow.close();
+        if (shopWindow != null) shopWindow.closePanel();
 
         // Dispose only tavern-local entities/map
         Iterator<Entity> it = entities.iterator();
@@ -430,11 +455,17 @@ public class GameScreen extends AbstractScreen {
         }
     }
 
+    private void showStatusToast(String msg) {
+        statusToast.show(msg);
+        statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
+    }
+
     private void syncUiInteractionLock() {
         if (inventoryWindow.isVisible()
             || equipmentWindow.isVisible()
             || lootWindow.isVisible()
             || craftingWindow.isVisible()
+            || shopWindow.isVisible()
             || dialogueWindow.isVisible()) {
             player.setInteracting(true);
         } else {
@@ -469,8 +500,21 @@ public class GameScreen extends AbstractScreen {
             return;
         }
 
+        if (shopWindow.isVisible()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                shopWindow.closePanel();
+            }
+            return;
+        }
+
+        // Quick-use potion (H) — works with I/P closed or open.
+        if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
+            handlePotionHotkey();
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.I)) {
             if (lootWindow.isVisible()) return;
+            inventoryWindow.hideContextMenu();
             if (inventoryWindow.isVisible()) {
                 inventoryWindow.closePanel();
             } else {
@@ -480,7 +524,7 @@ public class GameScreen extends AbstractScreen {
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
-            if (lootWindow.isVisible() || craftingWindow.isVisible()) return;
+            if (lootWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible()) return;
             if (equipmentWindow.isVisible()) {
                 equipmentWindow.closePanel();
             } else {
@@ -492,6 +536,9 @@ public class GameScreen extends AbstractScreen {
         if (inventoryWindow.isVisible() || equipmentWindow.isVisible()) {
             if (equipmentWindow.isVisible()) {
                 equipmentWindow.refresh();
+            }
+            if (inventoryWindow.isVisible()) {
+                inventoryWindow.refresh();
             }
             return;
         }
@@ -505,7 +552,7 @@ public class GameScreen extends AbstractScreen {
                 closestInteractable.onInteract(player);
                 inventoryWindow.refresh();
                 equipmentWindow.refresh();
-                if (!isDoor && (dialogueWindow.isVisible() || craftingWindow.isVisible())) {
+                if (!isDoor && (dialogueWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible())) {
                     player.setInteracting(true);
                 }
                 return;
@@ -528,11 +575,34 @@ public class GameScreen extends AbstractScreen {
             for (ItemStack stack : activeLootTarget.getLootTable()) {
                 player.getInventory().addItem(stack.getDefinition(), stack.getQuantity());
             }
+            int silver = activeLootTarget.getSilverLoot();
+            if (silver > 0) {
+                player.getWallet().addSilver(silver);
+                showStatusToast("+" + silver + " Prata");
+            }
             inventoryWindow.refresh();
+            equipmentWindow.refresh();
             activeLootTarget.clearLoot();
             lootWindow.setVisible(false);
             activeLootTarget = null;
             player.setInteracting(false);
+        }
+    }
+
+    private void handlePotionHotkey() {
+        if (lootWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible() || dialogueWindow.isVisible()) {
+            return;
+        }
+        int healPreview = player.getPotionSlot() != null
+            ? player.getPotionSlot().getDefinition().getHealAmount()
+            : 0;
+        PotionRules.Result result = player.tryUsePotionFromSlot();
+        inventoryWindow.refresh();
+        equipmentWindow.refresh();
+        if (result == PotionRules.Result.OK) {
+            showStatusToast("+" + healPreview + " HP");
+        } else {
+            showStatusToast(PotionRules.feedback(result, player.getPotionCooldownRemaining()));
         }
     }
 
@@ -572,6 +642,8 @@ public class GameScreen extends AbstractScreen {
         for (Entity e : entities) {
             if (e instanceof OreNode) {
                 ((OreNode) e).setInteractionTargeted(false);
+            } else if (e instanceof CraftingStation) {
+                ((CraftingStation) e).setInteractionTargeted(false);
             } else if (e instanceof Enemy) {
                 ((Enemy) e).setInteractionHighlighted(false);
             }
@@ -582,6 +654,7 @@ public class GameScreen extends AbstractScreen {
             || inventoryWindow.isVisible()
             || equipmentWindow.isVisible()
             || craftingWindow.isVisible()
+            || shopWindow.isVisible()
             || dialogueWindow.isVisible()
             || lootWindow.isVisible();
 
@@ -589,6 +662,8 @@ public class GameScreen extends AbstractScreen {
             Interactable nearest = findNearestInteractable();
             if (nearest instanceof OreNode) {
                 ((OreNode) nearest).setInteractionTargeted(true);
+            } else if (nearest instanceof CraftingStation) {
+                ((CraftingStation) nearest).setInteractionTargeted(true);
             } else if (!inTavern && nearest == null) {
                 Enemy corpse = findNearestLootableCorpse();
                 if (corpse != null) {

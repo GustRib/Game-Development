@@ -16,8 +16,8 @@ class CraftingJobTest {
     void craftConsumesImmediatelyGrantsAfterDurationAndBlocksSecondStart() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         Inventory inv = player.getInventory();
-        inv.addItem(ItemRegistry.COPPER_ORE, 5);
-        inv.addItem(ItemRegistry.IRON_ORE, 2);
+        inv.addItem(ItemRegistry.COPPER_ORE, 10);
+        inv.addItem(ItemRegistry.IRON_ORE, 20);
 
         CraftingController controller = new CraftingController();
         assertTrue(controller.tryStart(CraftingRecipes.COPPER_LONGSWORD, inv));

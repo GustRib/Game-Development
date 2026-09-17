@@ -18,6 +18,8 @@ public abstract class Enemy implements Entity {
     //Controle de Loot e Estado de Saque
     protected boolean isLooted = false;
     protected final List<ItemStack> lootTable = new ArrayList<>();
+    /** Silver (Prata) dropped with this corpse — not an inventory ItemStack. */
+    protected int silverLoot;
     /** Nearest lootable corpse highlight (set by GameScreen each frame). */
     private boolean interactionHighlighted;
 
@@ -107,7 +109,7 @@ public abstract class Enemy implements Entity {
      * e possuir itens em seu inventário interno.
      */
     public boolean hasLootAvailable() {
-        return isDead && !isLooted && !lootTable.isEmpty();
+        return isDead && !isLooted && (!lootTable.isEmpty() || silverLoot > 0);
     }
 
     /**
@@ -117,12 +119,21 @@ public abstract class Enemy implements Entity {
         return lootTable;
     }
 
+    public int getSilverLoot() {
+        return silverLoot;
+    }
+
+    public void setSilverLoot(int silverLoot) {
+        this.silverLoot = Math.max(0, silverLoot);
+    }
+
     /**
      * Marca o corpo do inimigo como looteado e limpa seus itens internos.
      * Garante que o loot exista apenas uma única vez no mundo.
      */
     public void clearLoot() {
         this.lootTable.clear();
+        this.silverLoot = 0;
         this.isLooted = true;
         System.out.println("O corpo do inimigo foi completamente saqueado e esvaziado.");
     }

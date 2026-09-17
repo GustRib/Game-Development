@@ -36,6 +36,7 @@ class PlayerAnimationStateTest {
         input.pressAttack();
 
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
+        player.grantFirstSword();
         player.update(0.016f, new Array<>());
 
         assertEquals(AnimationConstants.ANIM_ATTACK, player.getCurrentAnimationKey());

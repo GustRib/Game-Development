@@ -21,11 +21,11 @@ public final class CraftingRecipes {
 
     static {
         Map<ItemDefinition, Integer> swordCosts = new LinkedHashMap<>();
-        swordCosts.put(ItemRegistry.COPPER_ORE, 5);
-        swordCosts.put(ItemRegistry.IRON_ORE, 2);
+        swordCosts.put(ItemRegistry.IRON_ORE, 20);
+        swordCosts.put(ItemRegistry.COPPER_ORE, 10);
         COPPER_LONGSWORD = new CraftingRecipe(
-            "recipe_copper_longsword",
-            "Lamina de Cobre",
+            "recipe_iron_sword",
+            "Espada de Ferro",
             ItemRegistry.COPPER_LONGSWORD,
             swordCosts
         );

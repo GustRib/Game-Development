@@ -18,7 +18,9 @@ public class ItemRegistry {
     public static final ItemDefinition COPPER_CHESTPLATE;
     public static final ItemDefinition COPPER_GLOVES;
     public static final ItemDefinition COPPER_BOOTS;
-    public static final ItemDefinition HEALTH_POTION;
+    public static final ItemDefinition POTION_SMALL;
+    public static final ItemDefinition POTION_MEDIUM;
+    public static final ItemDefinition POTION_LARGE;
     public static final ItemDefinition STONE_PICKAXE;
 
     static {
@@ -44,10 +46,10 @@ public class ItemRegistry {
             "items/iron_ore.png"
         );
 
-        // Starter sword shares copper_sword art; stats alone distinguish it from the crafted upgrade.
+        // Mentor starter sword — Espada de Cobre (copper_sword art).
         IRON_SWORD = new ItemDefinition(
-            "iron_sword",
-            "Espada de Ferro",
+            "copper_sword",
+            "Espada de Cobre",
             "Sua primeira lamina. Dano 10.",
             ItemType.WEAPON,
             1,
@@ -58,16 +60,18 @@ public class ItemRegistry {
             0
         );
 
+        // Station-crafted upgrade — Espada de Ferro (no distinct iron_sword.png yet; reuse copper art).
+        // Damage 24: meaningful upgrade over starter (10) and old craft (16) for ~4× material cost.
         COPPER_LONGSWORD = new ItemDefinition(
-            "copper_longsword",
-            "Lamina de Cobre",
-            "Lamina reforcada na forja. Dano 16.",
+            "iron_sword",
+            "Espada de Ferro",
+            "Lamina de ferro reforcada na forja. Dano 24.",
             ItemType.WEAPON,
             1,
             200,
             false,
             "items/copper_sword.png",
-            16,
+            24,
             0
         );
 
@@ -127,15 +131,50 @@ public class ItemRegistry {
             ArmorSlot.BOOTS
         );
 
-        HEALTH_POTION = new ItemDefinition(
-            "health_potion",
-            "Pocao de Vida",
-            "Recupera 50 pontos de vida instantaneamente.",
+        // Asset names on disk: small/medium/big_health_potion.png (owner-provided).
+        POTION_SMALL = new ItemDefinition(
+            "potion_small",
+            "Pocao Pequena",
+            "Recupera 10 pontos de vida.",
             ItemType.CONSUMABLE,
-            10,
-            25,
+            99,
+            15,
             true,
-            "items/health_potion.png"
+            "items/small_health_potion.png",
+            0,
+            0,
+            ArmorSlot.NONE,
+            10
+        );
+
+        POTION_MEDIUM = new ItemDefinition(
+            "potion_medium",
+            "Pocao Media",
+            "Recupera 20 pontos de vida.",
+            ItemType.CONSUMABLE,
+            99,
+            30,
+            true,
+            "items/medium_health_potion.png",
+            0,
+            0,
+            ArmorSlot.NONE,
+            20
+        );
+
+        POTION_LARGE = new ItemDefinition(
+            "potion_large",
+            "Pocao Grande",
+            "Recupera 30 pontos de vida.",
+            ItemType.CONSUMABLE,
+            99,
+            50,
+            true,
+            "items/big_health_potion.png",
+            0,
+            0,
+            ArmorSlot.NONE,
+            30
         );
 
         STONE_PICKAXE = new ItemDefinition(
@@ -157,7 +196,9 @@ public class ItemRegistry {
         register(COPPER_CHESTPLATE);
         register(COPPER_GLOVES);
         register(COPPER_BOOTS);
-        register(HEALTH_POTION);
+        register(POTION_SMALL);
+        register(POTION_MEDIUM);
+        register(POTION_LARGE);
         register(STONE_PICKAXE);
     }
 

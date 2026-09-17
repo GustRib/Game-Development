@@ -6,6 +6,8 @@ Gênero: Rogue-like, Hack and Slash
 Engine: LibGDX
 Linguagem: Java 17
 Comando para rodar: .\gradlew.bat lwjgl3:run
+Comando para limpar cache de testes: .\gradlew.bat clean test
+Comando para rodar testes automatizados: ./gradlew :core:test 
 
 ⸻
 

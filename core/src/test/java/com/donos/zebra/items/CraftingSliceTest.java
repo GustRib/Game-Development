@@ -37,8 +37,8 @@ class CraftingSliceTest {
     @Test
     void craftSucceedsConsumesMaterialsAndGrantsItem() {
         Inventory inventory = new Inventory(20);
-        inventory.addItem(ItemRegistry.COPPER_ORE, 5);
-        inventory.addItem(ItemRegistry.IRON_ORE, 2);
+        inventory.addItem(ItemRegistry.COPPER_ORE, 10);
+        inventory.addItem(ItemRegistry.IRON_ORE, 20);
 
         assertTrue(CraftingRecipes.COPPER_LONGSWORD.craft(inventory));
         assertEquals(0, inventory.getItemCount(ItemRegistry.COPPER_ORE));
@@ -186,11 +186,11 @@ class CraftingSliceTest {
         player.grantFirstSword();
         assertEquals(10f, player.getAttackDamage(), 0.01f);
 
-        player.getInventory().addItem(ItemRegistry.COPPER_ORE, 5);
-        player.getInventory().addItem(ItemRegistry.IRON_ORE, 2);
+        player.getInventory().addItem(ItemRegistry.COPPER_ORE, 10);
+        player.getInventory().addItem(ItemRegistry.IRON_ORE, 20);
         assertTrue(CraftingRecipes.COPPER_LONGSWORD.craft(player.getInventory()));
         player.equipCrafted(ItemRegistry.COPPER_LONGSWORD);
-        assertEquals(16f, player.getAttackDamage(), 0.01f);
+        assertEquals(24f, player.getAttackDamage(), 0.01f);
 
         player.setPosition(100f, 100f);
         player.update(0.016f, new Array<>());
@@ -203,7 +203,7 @@ class CraftingSliceTest {
 
         float healthBefore = orc.getCurrentHealth();
         CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
-        assertEquals(healthBefore - 16f, orc.getCurrentHealth(), 0.01f);
+        assertEquals(healthBefore - 24f, orc.getCurrentHealth(), 0.01f);
     }
 
     @Test
@@ -214,6 +214,7 @@ class CraftingSliceTest {
         player.setPosition(100f, 100f);
         player.update(0.016f, new Array<>());
         assertFalse(player.hasWeaponEquipped());
+        assertFalse(AnimationConstants.ANIM_ATTACK.equals(player.getCurrentAnimationKey()));
 
         Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
         List<Entity> entities = new ArrayList<>();
@@ -236,5 +237,12 @@ class CraftingSliceTest {
         assertEquals("items/copper_chestplate.png", ItemRegistry.COPPER_CHESTPLATE.getIconPath());
         assertEquals("items/copper_gloves.png", ItemRegistry.COPPER_GLOVES.getIconPath());
         assertEquals("items/copper_boots.png", ItemRegistry.COPPER_BOOTS.getIconPath());
+        assertEquals("Espada de Cobre", ItemRegistry.IRON_SWORD.getName());
+        assertEquals("Espada de Ferro", ItemRegistry.COPPER_LONGSWORD.getName());
+        assertEquals(10, ItemRegistry.IRON_SWORD.getAttackDamage());
+        assertEquals(24, ItemRegistry.COPPER_LONGSWORD.getAttackDamage());
+        assertEquals(20, CraftingRecipes.COPPER_LONGSWORD.getCosts().get(ItemRegistry.IRON_ORE));
+        assertEquals(10, CraftingRecipes.COPPER_LONGSWORD.getCosts().get(ItemRegistry.COPPER_ORE));
+        assertEquals(102, SellPrices.unitSellPrice(ItemRegistry.COPPER_LONGSWORD));
     }
 }

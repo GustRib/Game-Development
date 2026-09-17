@@ -19,22 +19,31 @@ public class ItemDefinition {
     /** Flat damage reduction while equipped as armor; 0 for non-armor. */
     private final int defense;
     private final ArmorSlot armorSlot;
+    /** HP restored when consumed; 0 for non-potions. */
+    private final int healAmount;
 
     public ItemDefinition(String id, String name, String description, ItemType type,
                           int maxStackSize, int value, boolean isConsumable, String iconPath) {
-        this(id, name, description, type, maxStackSize, value, isConsumable, iconPath, 0, 0, ArmorSlot.NONE);
+        this(id, name, description, type, maxStackSize, value, isConsumable, iconPath, 0, 0, ArmorSlot.NONE, 0);
     }
 
     public ItemDefinition(String id, String name, String description, ItemType type,
                           int maxStackSize, int value, boolean isConsumable, String iconPath,
                           int attackDamage, int defense) {
         this(id, name, description, type, maxStackSize, value, isConsumable, iconPath,
-            attackDamage, defense, ArmorSlot.NONE);
+            attackDamage, defense, ArmorSlot.NONE, 0);
     }
 
     public ItemDefinition(String id, String name, String description, ItemType type,
                           int maxStackSize, int value, boolean isConsumable, String iconPath,
                           int attackDamage, int defense, ArmorSlot armorSlot) {
+        this(id, name, description, type, maxStackSize, value, isConsumable, iconPath,
+            attackDamage, defense, armorSlot, 0);
+    }
+
+    public ItemDefinition(String id, String name, String description, ItemType type,
+                          int maxStackSize, int value, boolean isConsumable, String iconPath,
+                          int attackDamage, int defense, ArmorSlot armorSlot, int healAmount) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -46,6 +55,7 @@ public class ItemDefinition {
         this.attackDamage = attackDamage;
         this.defense = defense;
         this.armorSlot = armorSlot == null ? ArmorSlot.NONE : armorSlot;
+        this.healAmount = Math.max(0, healAmount);
     }
 
     public String getId() {
@@ -90,6 +100,10 @@ public class ItemDefinition {
 
     public ArmorSlot getArmorSlot() {
         return armorSlot;
+    }
+
+    public int getHealAmount() {
+        return healAmount;
     }
 
     @Override
