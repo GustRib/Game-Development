@@ -24,6 +24,7 @@ import java.util.List;
 public final class CombatController {
 
     private static final float ATTACK_RANGE = 24f;
+    /** Fallback / starter damage (matches equipped {@code IRON_SWORD}). Prefer {@link Player#getAttackDamage()}. */
     private static final float ATTACK_DAMAGE = 10f;
 
     private CombatController() {
@@ -33,6 +34,7 @@ public final class CombatController {
         return ATTACK_RANGE;
     }
 
+    /** Starter sword damage constant; combat resolution uses the player's equipped weapon. */
     public static float getAttackDamage() {
         return ATTACK_DAMAGE;
     }
@@ -58,20 +60,21 @@ public final class CombatController {
             return;
         }
 
-        if (!player.hasFirstSword()) {
+        if (!player.hasWeaponEquipped()) {
             damageTexts.add(new DamageText(
                 player.getX(), player.getY() + 18f, "Precisa de uma arma!", Color.YELLOW));
             return;
         }
 
+        float damage = player.getAttackDamage();
         for (int i = entities.size() - 1; i >= 0; i--) {
             Entity ent = entities.get(i);
             if (ent instanceof Enemy && !ent.isDead()) {
                 float distance = Vector2.dst(player.getX(), player.getY(), ent.getX(), ent.getY());
                 if (distance <= ATTACK_RANGE) {
-                    ent.takeDamage(ATTACK_DAMAGE);
+                    ent.takeDamage(damage);
                     damageTexts.add(new DamageText(
-                        ent.getX(), ent.getY() + 15f, "-" + (int) ATTACK_DAMAGE, Color.RED));
+                        ent.getX(), ent.getY() + 15f, "-" + (int) damage, Color.RED));
                 }
             }
         }

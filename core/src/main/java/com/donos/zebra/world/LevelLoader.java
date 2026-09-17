@@ -54,6 +54,9 @@ public final class LevelLoader {
         float mentorY = 0f;
         boolean hasMentor = false;
         List<Vector2> oreNodePositions = new ArrayList<>();
+        float craftingStationX = 0f;
+        float craftingStationY = 0f;
+        boolean hasCraftingStation = false;
 
         MapLayer spawnLayer = map.getLayers().get(LevelConstants.SPAWN_LAYER);
         if (spawnLayer != null) {
@@ -113,6 +116,15 @@ public final class LevelLoader {
                         oreNodePositions.add(new Vector2(pos[0], pos[1]));
                         Gdx.app.log("SPAWN", "OreNode detectado em: " + pos[0] + ", " + pos[1]);
                     }
+                } else if (OpeningQuest.CRAFTING_STATION_OBJECT.equals(name)) {
+                    float[] pos = readObjectCenter(object);
+                    if (pos != null) {
+                        craftingStationX = pos[0];
+                        craftingStationY = pos[1];
+                        hasCraftingStation = true;
+                        Gdx.app.log("SPAWN", "CraftingStation detectado em: "
+                            + craftingStationX + ", " + craftingStationY);
+                    }
                 }
             }
         } else {
@@ -138,7 +150,8 @@ public final class LevelLoader {
         Array<Polygon> collisionPolygons = buildCollisionPolygons(collisionRects);
         
         return new LevelData(map, spawnX, spawnY, collisionRects, collisionPolygons,
-            mentorX, mentorY, hasMentor, oreNodePositions);
+            mentorX, mentorY, hasMentor, oreNodePositions,
+            craftingStationX, craftingStationY, hasCraftingStation);
     }
 
     private static float[] readObjectCenter(MapObject object) {

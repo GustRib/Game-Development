@@ -4,14 +4,18 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.Interaction.Interactable;
+import com.donos.zebra.entities.CraftingStation;
 import com.donos.zebra.entities.MentorAnimationLoader;
 import com.donos.zebra.entities.MentorNpc;
 import com.donos.zebra.entities.Orc;
 import com.donos.zebra.entities.OrcAnimationLoader;
 import com.donos.zebra.entities.OreNode;
 import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.ui.CraftingUI;
 import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.world.LevelData;
 import com.donos.zebra.world.dungeon.DungeonMap;
@@ -110,5 +114,26 @@ public final class LevelPopulator {
             interactables.add(node);
             entities.add(node);
         }
+    }
+
+    public static CraftingStation addCraftingStation(LevelData levelData,
+                                                     CraftingUI craftingUI,
+                                                     AssetManager assetManager,
+                                                     List<Interactable> interactables,
+                                                     List<? super CraftingStation> entities,
+                                                     Array<Polygon> collisionPolygons) {
+        if (!levelData.hasCraftingStation) {
+            return null;
+        }
+
+        Texture texture = assetManager.get(ItemRegistry.STONE_PICKAXE.getIconPath(), Texture.class);
+        CraftingStation station = new CraftingStation(
+            levelData.craftingStationX, levelData.craftingStationY, texture, craftingUI);
+        interactables.add(station);
+        entities.add(station);
+        if (collisionPolygons != null) {
+            collisionPolygons.add(station.getCollisionPolygon());
+        }
+        return station;
     }
 }

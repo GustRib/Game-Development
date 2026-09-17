@@ -9,6 +9,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.items.Inventory;
+import com.donos.zebra.items.ItemDefinition;
+import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.items.ItemType;
 import com.donos.zebra.util.CollisionMovement;
 
 import java.util.Map;
@@ -50,8 +53,12 @@ public class Player implements Entity {
 
     // --- SISTEMA DE ITENS ---
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
-    private boolean isInteracting = false;                  // Trava o jogador na tela de loot
+    private boolean isInteracting = false;
     private boolean hasFirstSword = false;
+    private ItemDefinition equippedWeapon = null;
+    private ItemDefinition equippedHelmet = null;
+    private ItemDefinition equippedChestplate = null;
+    private ItemDefinition equippedBoots = null;
 
     public Player() {
         this(new PlayerInput());
@@ -257,7 +264,8 @@ public class Player implements Entity {
     @Override
     public void takeDamage(float amount) {
         if (isDead) return;
-        currentHealth -= amount;
+        float mitigated = Math.max(1f, amount - getDefense());
+        currentHealth -= mitigated;
         if (currentHealth <= 0) {
             currentHealth = 0;
             isDead = true;
@@ -307,7 +315,92 @@ public class Player implements Entity {
         return hasFirstSword;
     }
 
+    /**
+     * Mentor opening reward: inventory sword + equip it so melee unlocks at damage 10.
+     */
     public void grantFirstSword() {
         this.hasFirstSword = true;
+        equipWeapon(ItemRegistry.IRON_SWORD);
+    }
+
+    public boolean hasWeaponEquipped() {
+        return equippedWeapon != null;
+    }
+
+    public ItemDefinition getEquippedWeapon() {
+        return equippedWeapon;
+    }
+
+    public ItemDefinition getEquippedHelmet() {
+        return equippedHelmet;
+    }
+
+    public ItemDefinition getEquippedChestplate() {
+        return equippedChestplate;
+    }
+
+    public ItemDefinition getEquippedBoots() {
+        return equippedBoots;
+    }
+
+    public float getAttackDamage() {
+        return equippedWeapon != null ? equippedWeapon.getAttackDamage() : 0f;
+    }
+
+    /** Sum of defense from all equipped armor pieces (0 for empty slots). */
+    public float getDefense() {
+        return slotDefense(equippedHelmet)
+            + slotDefense(equippedChestplate)
+            + slotDefense(equippedBoots);
+    }
+
+    private static float slotDefense(ItemDefinition piece) {
+        return piece != null ? piece.getDefense() : 0f;
+    }
+
+    public void equipWeapon(ItemDefinition weapon) {
+        if (weapon == null || weapon.getType() != ItemType.WEAPON) {
+            return;
+        }
+        this.equippedWeapon = weapon;
+        this.hasFirstSword = true;
+    }
+
+    /**
+     * Equips armor into the slot defined by {@link ItemDefinition#getArmorSlot()},
+     * replacing whatever was previously in that slot only.
+     */
+    public void equipArmor(ItemDefinition armor) {
+        if (armor == null || armor.getType() != ItemType.ARMOR) {
+            return;
+        }
+        switch (armor.getArmorSlot()) {
+            case HELMET:
+                equippedHelmet = armor;
+                break;
+            case CHESTPLATE:
+                equippedChestplate = armor;
+                break;
+            case BOOTS:
+                equippedBoots = armor;
+                break;
+            case NONE:
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Auto-equip after a successful craft at the station.
+     */
+    public void equipCrafted(ItemDefinition item) {
+        if (item == null) {
+            return;
+        }
+        if (item.getType() == ItemType.WEAPON) {
+            equipWeapon(item);
+        } else if (item.getType() == ItemType.ARMOR) {
+            equipArmor(item);
+        }
     }
 }

@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -37,13 +38,21 @@ class AssetQueueOwnershipTest {
 
         assertTrue(unique.contains("items/copper_ore.png"));
         assertTrue(unique.contains("items/stone_pickaxe.png"));
-        assertTrue(unique.contains("items/iron_sword.png"));
+        assertTrue(unique.contains("items/iron_ore.png"));
+        assertTrue(unique.contains("items/copper_sword.png"));
+        assertTrue(unique.contains("items/copper_helmet.png"));
+        assertTrue(unique.contains("items/copper_chestplate.png"));
+        assertTrue(unique.contains("items/copper_boots.png"));
+        assertFalse(unique.contains("items/iron_sword.png"));
+        assertFalse(unique.contains("items/copper_longsword.png"));
+        assertFalse(unique.contains("items/copper_mail.png"));
         assertTrue(unique.contains(AnimationConstants.IDLE_SHEET_PATH));
         assertTrue(unique.contains(OrcAnimationLoader.ORC_MASTER_PATH));
         assertTrue(unique.contains(LevelConstants.MAP_PATH));
 
         verify(assetManager).load(eq(LevelConstants.MAP_PATH), eq(TiledMap.class));
         verify(assetManager).load(eq("items/copper_ore.png"), eq(Texture.class));
-        verify(assetManager).load(eq("items/iron_sword.png"), eq(Texture.class));
+        verify(assetManager).load(eq("items/copper_sword.png"), eq(Texture.class));
+        verify(assetManager).load(eq("items/iron_ore.png"), eq(Texture.class));
     }
 }

@@ -29,6 +29,7 @@ import com.donos.zebra.items.ItemStack;
 import com.donos.zebra.screens.gameplay.CombatController;
 import com.donos.zebra.screens.gameplay.LevelPopulator;
 import com.donos.zebra.screens.gameplay.PlayerDeathHandler;
+import com.donos.zebra.ui.CraftingUI;
 import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.ui.InventoryUI;
 import com.donos.zebra.ui.LootUI;
@@ -78,6 +79,7 @@ public class GameScreen extends AbstractScreen {
     private Skin uiSkin;
 
     private DialogueUI dialogueWindow;
+    private CraftingUI craftingWindow;
     private final List<Interactable> interactables = new ArrayList<>();
     private Interactable activeInteractionTarget = null;
 
@@ -130,8 +132,14 @@ public class GameScreen extends AbstractScreen {
         dialogueWindow.setPosition(Gdx.graphics.getWidth() / 2f, 50, Align.bottom);
         uiStage.addActor(dialogueWindow);
 
+        craftingWindow = new CraftingUI(uiSkin, game.getAssetManager());
+        craftingWindow.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center);
+        uiStage.addActor(craftingWindow);
+
         LevelPopulator.addMentor(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
         LevelPopulator.addOreNodes(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        LevelPopulator.addCraftingStation(
+            levelData, craftingWindow, game.getAssetManager(), interactables, entities, collisionPolygons);
         LevelPopulator.addOrcs(
             proceduralMap, dungeonMap, initialSpawnX, initialSpawnY, game.getAssetManager(), entities);
 
@@ -209,6 +217,15 @@ public class GameScreen extends AbstractScreen {
         if (dialogueWindow.isVisible()) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
                 dialogueWindow.hideDialogue();
+                player.setInteracting(false);
+                activeInteractionTarget = null;
+            }
+            return;
+        }
+
+        if (craftingWindow.isVisible()) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                craftingWindow.close();
                 player.setInteracting(false);
                 activeInteractionTarget = null;
             }
@@ -319,6 +336,9 @@ public class GameScreen extends AbstractScreen {
         }
         if (dialogueWindow != null) {
             dialogueWindow.setPosition(width / 2f, 50, Align.bottom);
+        }
+        if (craftingWindow != null) {
+            craftingWindow.setPosition(width / 2f, height / 2f, Align.center);
         }
     }
 

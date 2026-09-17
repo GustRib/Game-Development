@@ -24,17 +24,30 @@ public final class LevelData {
     /** World positions of copper ore nodes parsed from the spawn layer. */
     public final List<Vector2> oreNodePositions;
 
+    public final float craftingStationX;
+    public final float craftingStationY;
+    public final boolean hasCraftingStation;
+
     public LevelData(TiledMap map, float spawnX, float spawnY,
                      Array<Rectangle> collisionRects, Array<Polygon> collisionPolygons,
                      float mentorX, float mentorY, boolean hasMentor) {
         this(map, spawnX, spawnY, collisionRects, collisionPolygons,
-            mentorX, mentorY, hasMentor, Collections.emptyList());
+            mentorX, mentorY, hasMentor, Collections.emptyList(), 0f, 0f, false);
     }
 
     public LevelData(TiledMap map, float spawnX, float spawnY,
                      Array<Rectangle> collisionRects, Array<Polygon> collisionPolygons,
                      float mentorX, float mentorY, boolean hasMentor,
                      List<Vector2> oreNodePositions) {
+        this(map, spawnX, spawnY, collisionRects, collisionPolygons,
+            mentorX, mentorY, hasMentor, oreNodePositions, 0f, 0f, false);
+    }
+
+    public LevelData(TiledMap map, float spawnX, float spawnY,
+                     Array<Rectangle> collisionRects, Array<Polygon> collisionPolygons,
+                     float mentorX, float mentorY, boolean hasMentor,
+                     List<Vector2> oreNodePositions,
+                     float craftingStationX, float craftingStationY, boolean hasCraftingStation) {
         this.map = map;
         this.spawnX = spawnX;
         this.spawnY = spawnY;
@@ -46,5 +59,8 @@ public final class LevelData {
         this.oreNodePositions = oreNodePositions == null
             ? Collections.emptyList()
             : Collections.unmodifiableList(oreNodePositions);
+        this.craftingStationX = craftingStationX;
+        this.craftingStationY = craftingStationY;
+        this.hasCraftingStation = hasCraftingStation;
     }
 }

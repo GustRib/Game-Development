@@ -41,9 +41,9 @@ public class Orc extends Enemy {
         this.hitbox.setPosition(x, y);
         setHitboxLocalVertices(vertices);
 
-        // ADICIONAR LOOT FIXO NO SPAWN ---
-        // Adiciona exatamente 3 unidades de Minério de Cobre para testes(remover depois)
-        this.lootTable.add(new ItemStack(ItemRegistry.COPPER_ORE, 3));
+        // Mining yields copper; combat yields iron (plus a trickle of copper) so crafts need both loops.
+        this.lootTable.add(new ItemStack(ItemRegistry.COPPER_ORE, 1));
+        this.lootTable.add(new ItemStack(ItemRegistry.IRON_ORE, 2));
     }
 
     public void updateEnemy(Player player, float delta) {

@@ -38,7 +38,7 @@ class CombatControllerTest {
         float orcHealthBefore = orc.getCurrentHealth();
         CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
 
-        assertEquals(orcHealthBefore - CombatController.getAttackDamage(), orc.getCurrentHealth(), 0.01f);
+        assertEquals(orcHealthBefore - player.getAttackDamage(), orc.getCurrentHealth(), 0.01f);
         assertEquals(1, damageTexts.size());
         assertTrue(entities.contains(orc));
     }

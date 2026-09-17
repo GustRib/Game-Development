@@ -43,7 +43,11 @@ public class LoadingScreen extends AbstractScreen {
                                            boolean proceduralDungeon) {
         assetManager.load("items/copper_ore.png", Texture.class);
         assetManager.load("items/stone_pickaxe.png", Texture.class);
-        assetManager.load("items/iron_sword.png", Texture.class);
+        assetManager.load("items/iron_ore.png", Texture.class);
+        assetManager.load("items/copper_sword.png", Texture.class);
+        assetManager.load("items/copper_helmet.png", Texture.class);
+        assetManager.load("items/copper_chestplate.png", Texture.class);
+        assetManager.load("items/copper_boots.png", Texture.class);
 
         MentorAnimationLoader.queueAssets(assetManager);
         PlayerAnimationLoader.queueAssets(assetManager);

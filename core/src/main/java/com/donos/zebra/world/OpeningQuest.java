@@ -18,6 +18,8 @@ public final class OpeningQuest {
 
     public static final String ORE_NODE_OBJECT_PREFIX = "OreNode";
 
+    public static final String CRAFTING_STATION_OBJECT = "CraftingStation";
+
     private OpeningQuest() {
     }
 

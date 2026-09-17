@@ -38,15 +38,17 @@ class OrcCombatTest {
     }
 
     @Test
-    void orcDiesAtZeroHealthAndOffersCopperLoot() {
+    void orcDiesAtZeroHealthAndOffersMixedOreLoot() {
         Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations());
         orc.takeDamage(40f);
 
         assertTrue(orc.isDead());
         assertTrue(orc.hasLootAvailable());
-        assertEquals(1, orc.getLootTable().size());
+        assertEquals(2, orc.getLootTable().size());
         assertEquals(ItemRegistry.COPPER_ORE.getId(), orc.getLootTable().get(0).getDefinition().getId());
-        assertEquals(3, orc.getLootTable().get(0).getQuantity());
+        assertEquals(1, orc.getLootTable().get(0).getQuantity());
+        assertEquals(ItemRegistry.IRON_ORE.getId(), orc.getLootTable().get(1).getDefinition().getId());
+        assertEquals(2, orc.getLootTable().get(1).getQuantity());
 
         orc.clearLoot();
         assertFalse(orc.hasLootAvailable());
