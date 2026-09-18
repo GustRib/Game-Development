@@ -250,7 +250,8 @@ public class Orc extends Enemy {
         if (wasAlive && isDead) {
             deathTimer = 0f;
             if (questLog != null) {
-                questLog.reportKillEnemy(QuestIds.ENEMY_ORC);
+                questLog.reportKillEnemy(
+                    QuestIds.ENEMY_ORC, getKillWeaponItemId(), getKillSkillId());
             }
         }
         if (!isDead) {
@@ -260,6 +261,12 @@ public class Orc extends Enemy {
             this.attackElapsed = 0f;
             this.attackImpactApplied = false;
         }
+    }
+
+    @Override
+    public void takeDamage(float amount, String weaponItemId, String skillId) {
+        setKillAttribution(weaponItemId, skillId);
+        takeDamage(amount);
     }
 
     @Override

@@ -153,7 +153,8 @@ public class CraftingUI extends GameWindow {
         Inventory inventory = boundPlayer.getInventory();
         boolean busy = craftingController.isBusy();
         for (CraftingRecipe recipe : CraftingRecipes.all()) {
-            recipeTable.add(buildRecipeRow(recipe, inventory, contentWidth, busy))
+            boolean unlocked = boundPlayer.isRecipeUnlocked(recipe);
+            recipeTable.add(buildRecipeRow(recipe, inventory, contentWidth, busy, unlocked))
                 .width(contentWidth).growX().padBottom(6).row();
         }
         recipeTable.pack();
@@ -168,25 +169,38 @@ public class CraftingUI extends GameWindow {
         }
     }
 
-    private Table buildRecipeRow(CraftingRecipe recipe, Inventory inventory, float width, boolean busy) {
+    private Table buildRecipeRow(CraftingRecipe recipe,
+                                 Inventory inventory,
+                                 float width,
+                                 boolean busy,
+                                 boolean unlocked) {
         Table row = new Table();
         row.setBackground(createColorDrawable(new Color(0.18f, 0.18f, 0.2f, 0.95f)));
         row.pad(6);
         row.left();
 
-        boolean canAfford = recipe.canAfford(inventory);
+        boolean canAfford = unlocked && recipe.canAfford(inventory);
         ItemDefinition result = recipe.getResult();
 
         Table header = new Table();
-        Image icon = createResultIcon(result, canAfford && !busy);
+        Image icon = createResultIcon(result, unlocked && canAfford && !busy);
         if (icon != null) {
+            if (!unlocked) {
+                icon.setColor(0.4f, 0.4f, 0.45f, 1f);
+            }
             header.add(icon).size(24, 24).padRight(6);
         }
 
         Label name = new Label(recipe.getDisplayName(), skin);
-        name.setColor(canAfford && !busy ? Color.WHITE : Color.GRAY);
+        name.setColor(unlocked ? (canAfford && !busy ? Color.WHITE : Color.GRAY)
+            : new Color(0.55f, 0.55f, 0.6f, 1f));
         name.setWrap(true);
         header.add(name).growX().left();
+        if (!unlocked) {
+            Label locked = new Label("BLOQUEADO", skin);
+            locked.setColor(new Color(0.9f, 0.55f, 0.35f, 1f));
+            header.add(locked).padLeft(8).right();
+        }
         row.add(header).width(width - 12f).growX().row();
 
         String statLine;
@@ -195,13 +209,19 @@ public class CraftingUI extends GameWindow {
         } else {
             statLine = "Defesa " + result.getDefense();
         }
-        Label stats = new Label(statLine + "  |  " + formatCosts(recipe, inventory), skin);
+        Label stats = new Label(
+            unlocked ? (statLine + "  |  " + formatCosts(recipe, inventory))
+                : (statLine + "  |  Desbloqueie via quest"),
+            skin);
         stats.setWrap(true);
-        stats.setColor(canAfford && !busy ? new Color(0.7f, 0.85f, 0.7f, 1f) : Color.DARK_GRAY);
+        stats.setColor(unlocked && canAfford && !busy
+            ? new Color(0.7f, 0.85f, 0.7f, 1f) : Color.DARK_GRAY);
         row.add(stats).width(width - 12f).growX().padTop(2).left().row();
 
         String btnText;
-        if (busy) {
+        if (!unlocked) {
+            btnText = "BLOQUEADO";
+        } else if (busy) {
             btnText = "FORJANDO...";
         } else if (canAfford) {
             btnText = "CRIAR";
@@ -209,16 +229,18 @@ public class CraftingUI extends GameWindow {
             btnText = "FALTA MATERIAL";
         }
         TextButton craftBtn = new TextButton(btnText, skin, "craft");
-        craftBtn.setDisabled(busy || !canAfford);
-        if (busy || !canAfford) {
+        craftBtn.setDisabled(!unlocked || busy || !canAfford);
+        if (!unlocked || busy || !canAfford) {
             craftBtn.setColor(Color.DARK_GRAY);
         }
-        craftBtn.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                tryStartCraft(recipe);
-            }
-        });
+        if (unlocked) {
+            craftBtn.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    tryStartCraft(recipe);
+                }
+            });
+        }
         row.add(craftBtn).padTop(4).height(28).growX();
         return row;
     }
@@ -239,6 +261,12 @@ public class CraftingUI extends GameWindow {
         if (boundPlayer == null) {
             return;
         }
+        if (!boundPlayer.isRecipeUnlocked(recipe)) {
+            statusLabel.setText("Receita bloqueada.");
+            statusLabel.setColor(Color.ORANGE);
+            rebuild();
+            return;
+        }
         if (craftingController.isBusy()) {
             statusLabel.setText("Ja ha uma forja em andamento.");
             statusLabel.setColor(Color.ORANGE);
@@ -251,7 +279,8 @@ public class CraftingUI extends GameWindow {
             rebuild();
             return;
         }
-        boolean ok = craftingController.tryStart(recipe, boundPlayer.getInventory());
+        boolean ok = craftingController.tryStart(
+            recipe, boundPlayer.getInventory(), boundPlayer.getUnlockedRecipeIds());
         if (ok) {
             statusLabel.setText("Forjando " + recipe.getResult().getName() + "...");
             statusLabel.setColor(Color.LIGHT_GRAY);

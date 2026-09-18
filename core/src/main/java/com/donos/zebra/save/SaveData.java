@@ -5,7 +5,7 @@ package com.donos.zebra.save;
  */
 public class SaveData {
 
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
     public int version = CURRENT_VERSION;
     public long savedAtEpochMs;

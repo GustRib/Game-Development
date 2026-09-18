@@ -114,6 +114,8 @@ public final class SaveStateMapper {
         for (String id : barIds) {
             p.skillBarSlotIds.add(id);
         }
+        p.unlockedRecipeIds = new java.util.ArrayList<>(player.getUnlockedRecipeIds());
+        p.unlockedSkillIds = player.getSkillBook().snapshotUnlockedSkillIds();
         return p;
     }
 
@@ -149,6 +151,10 @@ public final class SaveStateMapper {
         if (data.skillBarSlotIds != null && !data.skillBarSlotIds.isEmpty()) {
             player.getSkillBook().getBar().restoreFromIds(
                 data.skillBarSlotIds.toArray(new String[0]));
+        }
+        player.restoreUnlockedRecipes(data.unlockedRecipeIds);
+        if (data.unlockedSkillIds != null) {
+            player.getSkillBook().setUnlockedSkills(data.unlockedSkillIds);
         }
         player.setPosition(data.x, data.y);
     }

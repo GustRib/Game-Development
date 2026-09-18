@@ -67,6 +67,7 @@ public class Player implements Entity {
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
     private final Wallet wallet = new Wallet();
     private final com.donos.zebra.skills.SkillBook skillBook = new com.donos.zebra.skills.SkillBook();
+    private final java.util.LinkedHashSet<String> unlockedRecipeIds = new java.util.LinkedHashSet<>();
     private String characterName = "";
     private boolean isInteracting = false;
     private boolean hasFirstSword = false;
@@ -453,6 +454,36 @@ public class Player implements Entity {
 
     public com.donos.zebra.skills.SkillBook getSkillBook() {
         return skillBook;
+    }
+
+    public void unlockRecipe(String recipeId) {
+        if (recipeId != null && !recipeId.isEmpty()) {
+            unlockedRecipeIds.add(recipeId);
+        }
+    }
+
+    public boolean isRecipeUnlocked(String recipeId) {
+        return com.donos.zebra.items.CraftingRecipes.isCraftable(
+            com.donos.zebra.items.CraftingRecipes.findById(recipeId), unlockedRecipeIds);
+    }
+
+    public boolean isRecipeUnlocked(com.donos.zebra.items.CraftingRecipe recipe) {
+        return com.donos.zebra.items.CraftingRecipes.isCraftable(recipe, unlockedRecipeIds);
+    }
+
+    public java.util.Set<String> getUnlockedRecipeIds() {
+        return java.util.Collections.unmodifiableSet(unlockedRecipeIds);
+    }
+
+    public void restoreUnlockedRecipes(java.util.Collection<String> recipeIds) {
+        unlockedRecipeIds.clear();
+        if (recipeIds != null) {
+            for (String id : recipeIds) {
+                if (id != null && !id.isEmpty()) {
+                    unlockedRecipeIds.add(id);
+                }
+            }
+        }
     }
 
     public Direction getFacingDirection() {

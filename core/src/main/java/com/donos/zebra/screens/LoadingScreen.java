@@ -52,6 +52,7 @@ public class LoadingScreen extends AbstractScreen {
         assetManager.load("items/stone_pickaxe.png", Texture.class);
         assetManager.load("items/iron_ore.png", Texture.class);
         assetManager.load("items/copper_sword.png", Texture.class);
+        assetManager.load("items/silver_sword.png", Texture.class);
         assetManager.load("items/copper_helmet.png", Texture.class);
         assetManager.load("items/copper_chestplate.png", Texture.class);
         assetManager.load("items/copper_gloves.png", Texture.class);

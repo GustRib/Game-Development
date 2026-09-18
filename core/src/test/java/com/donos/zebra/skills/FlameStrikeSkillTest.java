@@ -24,6 +24,7 @@ class FlameStrikeSkillTest extends HeadlessTestBase {
         StubPlayerInput input = new StubPlayerInput();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.grantFirstSword();
+        player.getSkillBook().unlock(SkillRegistry.FLAME_STRIKE_ID);
         player.setPosition(0f, 0f);
         input.simulateMovement(1f, 0f);
         player.update(0.016f, new com.badlogic.gdx.utils.Array<>());

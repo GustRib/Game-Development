@@ -22,4 +22,12 @@ public interface QuestLogListener {
 
     default void onTrackedQuestChanged(String questId) {
     }
+
+    /**
+     * Fired once when progress crosses a milestone threshold (objective stays active).
+     */
+    default void onProgressMilestone(QuestDefinition quest,
+                                     QuestObjectiveDefinition objective,
+                                     QuestProgressMilestone milestone) {
+    }
 }

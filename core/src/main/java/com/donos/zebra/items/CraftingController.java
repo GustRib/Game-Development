@@ -17,13 +17,20 @@ public final class CraftingController {
 
     /**
      * Consumes materials immediately and starts the forge timer.
-     * @return false if already busy or materials insufficient
+     * @return false if already busy, recipe locked, or materials insufficient
      */
     public boolean tryStart(CraftingRecipe recipe, Inventory inventory) {
+        return tryStart(recipe, inventory, null);
+    }
+
+    public boolean tryStart(CraftingRecipe recipe, Inventory inventory, java.util.Set<String> unlockedRecipeIds) {
         if (activeJob != null && activeJob.isComplete()) {
             activeJob = null;
         }
         if (isBusy()) {
+            return false;
+        }
+        if (!CraftingRecipes.isCraftable(recipe, unlockedRecipeIds)) {
             return false;
         }
         if (!recipe.consumeMaterials(inventory)) {

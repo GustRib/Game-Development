@@ -60,8 +60,8 @@ public final class FlameStrikeBehavior implements SkillBehavior {
             if (!isInFlameArc(player, enemy, facingDegrees)) {
                 continue;
             }
-            enemy.takeDamage(damage);
-            enemy.getStatusEffects().apply(new BurningStatus());
+            enemy.takeDamage(damage, null, SkillRegistry.FLAME_STRIKE_ID);
+            enemy.getStatusEffects().apply(new BurningStatus(SkillRegistry.FLAME_STRIKE_ID));
             if (context.effects != null && context.vfxFactory != null) {
                 context.effects.spawn(context.vfxFactory.createBurningAura(enemy));
             }

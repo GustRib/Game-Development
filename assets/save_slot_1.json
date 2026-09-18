@@ -1,15 +1,15 @@
 {
-"version": 1,
-"savedAtEpochMs": 1789756556557,
+"version": 2,
+"savedAtEpochMs": 1789771709157,
 "slotIndex": 1,
 "player": {
-	"characterName": "Sharkal",
-	"x": 608.18243,
-	"y": 89.36305,
-	"currentHealth": 54,
+	"characterName": "gust",
+	"x": 674.0327,
+	"y": 105.321976,
+	"currentHealth": 82,
 	"maxHealth": 100,
 	"hasFirstSword": true,
-	"totalSilver": 64,
+	"totalSilver": 56,
 	"inventorySlots": [
 		{
 			"itemId": "stone_pickaxe",
@@ -21,11 +21,14 @@
 		},
 		{
 			"itemId": "iron_ore",
-			"quantity": 18
+			"quantity": 8
 		},
 		null,
 		null,
-		null,
+		{
+			"itemId": "potion_medium",
+			"quantity": 13
+		},
 		null,
 		null,
 		null,
@@ -47,18 +50,25 @@
 	"equippedGlovesId": "copper_gloves",
 	"equippedBootsId": "copper_boots",
 	"potionSlot": {
-		"itemId": "potion_medium",
-		"quantity": 2
+		"itemId": "potion_large",
+		"quantity": 34
 	},
-	"potionCooldownRemaining": 0,
+	"potionCooldownRemaining": 3.1145132,
 	"inTavern": false,
-	"outdoorReturnX": 124,
-	"outdoorReturnY": 720,
+	"outdoorReturnX": 128.32022,
+	"outdoorReturnY": 727.31537,
 	"skillBarSlotIds": [
-		"flame_strike",
 		"whirlwind",
+		"flame_strike",
 		null,
 		null
+	],
+	"unlockedRecipeIds": [
+		"recipe_iron_sword"
+	],
+	"unlockedSkillIds": [
+		"whirlwind",
+		"flame_strike"
 	]
 },
 "world": {
@@ -91,14 +101,14 @@
 	],
 	"orcs": [
 		{
-			"spawnX": 115.3333,
-			"spawnY": 790,
-			"x": 191.97649,
-			"y": 775.5198,
-			"currentHealth": 0,
+			"spawnX": 175.3333,
+			"spawnY": 690,
+			"x": 175.3333,
+			"y": 690,
+			"currentHealth": 40,
 			"maxHealth": 40,
-			"dead": true,
-			"deathTimer": 37.65615,
+			"dead": false,
+			"deathTimer": 0,
 			"looted": false,
 			"silverLoot": 7,
 			"loot": [
@@ -109,27 +119,14 @@
 			]
 		},
 		{
-			"spawnX": 175.3333,
-			"spawnY": 690,
-			"x": 323.14893,
-			"y": 643.604,
+			"spawnX": 115.3333,
+			"spawnY": 790,
+			"x": 171.69638,
+			"y": 668.2571,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 58.075893,
-			"looted": true,
-			"silverLoot": 0,
-			"loot": []
-		},
-		{
-			"spawnX": 650,
-			"spawnY": 150,
-			"x": 770.97076,
-			"y": 205.13303,
-			"currentHealth": 0,
-			"maxHealth": 40,
-			"dead": true,
-			"deathTimer": 14.201226,
+			"deathTimer": 59.65798,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -142,7 +139,20 @@
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 12.56415,
+			"deathTimer": 12.312659,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		},
+		{
+			"spawnX": 650,
+			"spawnY": 150,
+			"x": 679.14795,
+			"y": 199.6648,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 15.951837,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -150,12 +160,12 @@
 		{
 			"spawnX": 620,
 			"spawnY": 80,
-			"x": 631.0129,
-			"y": 89.59063,
+			"x": 689.9205,
+			"y": 67.6803,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 3.1960082,
+			"deathTimer": 2.6901095,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -163,7 +173,21 @@
 	]
 },
 "quest": {
-	"mentorGavePickaxe": true
+	"mentorGavePickaxe": true,
+	"activeQuestId": null,
+	"currentObjectiveIndex": 0,
+	"objectiveProgress": null,
+	"objectiveCompleted": null,
+	"completedQuestIds": [
+		"primeira_espada",
+		"limpeza_orcs",
+		"peitoral_cobre",
+		"conjunto_cobre",
+		"prova_lamina_ferro",
+		"prova_redemoinho",
+		"prova_golpe_flamejante"
+	],
+	"objectiveFiredMilestones": null
 },
 "crafting": null
 }

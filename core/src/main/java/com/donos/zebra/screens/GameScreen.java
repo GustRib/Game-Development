@@ -194,6 +194,7 @@ public class GameScreen extends AbstractScreen {
         if (session.getCharacterName() != null && !session.getCharacterName().isEmpty()) {
             player.setCharacterName(session.getCharacterName());
         }
+        questLog.setProgressPlayer(player);
         skillVfxFactory = new SkillVfxFactory(game.getAssetManager());
         skillVfxFactory.ensureLoaded();
 
@@ -911,6 +912,7 @@ public class GameScreen extends AbstractScreen {
         // Name above HP bar (world space, after bar so it stays readable)
         beginBatch();
         CombatController.renderPlayerName(batch, nameFont, player);
+        renderInteractionPrompts();
         endBatch();
 
         shapeRenderer.setProjectionMatrix(cameraController.getCamera().combined);
@@ -1332,6 +1334,23 @@ public class GameScreen extends AbstractScreen {
             }
         }
 
+        if (!lootWindow.isVisible()
+            && !shopWindow.isVisible()
+            && !craftingWindow.isVisible()
+            && !dialogueWindow.isVisible()
+            && Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            Interactable closest = findNearestInteractable();
+            if (closest != null && closest.hasSecondaryInteract()) {
+                closest.onSecondaryInteract(player);
+                inventoryWindow.refresh();
+                equipmentWindow.refresh();
+                if (shopWindow.isVisible()) {
+                    player.setInteracting(true);
+                }
+                return;
+            }
+        }
+
         if (lootWindow.isVisible() && activeLootTarget != null && Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             for (ItemStack stack : activeLootTarget.getLootTable()) {
                 player.getInventory().addItem(stack.getDefinition(), stack.getQuantity());
@@ -1365,6 +1384,36 @@ public class GameScreen extends AbstractScreen {
         } else {
             showStatusToast(PotionRules.feedback(result, player.getPotionCooldownRemaining()));
         }
+    }
+
+    private void renderInteractionPrompts() {
+        if (player == null || player.isDead() || flow.isOverlayPause()) {
+            return;
+        }
+        if (inventoryWindow.isVisible() || equipmentWindow.isVisible()
+            || craftingWindow.isVisible() || shopWindow.isVisible()
+            || dialogueWindow.isVisible() || lootWindow.isVisible()) {
+            return;
+        }
+        Interactable nearest = findNearestInteractable();
+        if (nearest == null || nameFont == null) {
+            return;
+        }
+        float y = nearest.getY() + 42f;
+        nameFont.setColor(1f, 0.95f, 0.7f, 1f);
+        String primary = nearest.getPromptText();
+        if (primary != null && !primary.isEmpty()) {
+            nameFont.draw(batch, primary, nearest.getX() - 40f, y);
+            y += 12f;
+        }
+        if (nearest.hasSecondaryInteract()) {
+            String secondary = nearest.getSecondaryPromptText();
+            if (secondary != null && !secondary.isEmpty()) {
+                nameFont.setColor(0.7f, 0.9f, 1f, 1f);
+                nameFont.draw(batch, secondary, nearest.getX() - 40f, y);
+            }
+        }
+        nameFont.setColor(1f, 1f, 1f, 1f);
     }
 
     private Interactable findNearestInteractable() {

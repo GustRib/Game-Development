@@ -41,6 +41,7 @@ class AssetQueueOwnershipTest {
         assertTrue(unique.contains("items/stone_pickaxe.png"));
         assertTrue(unique.contains("items/iron_ore.png"));
         assertTrue(unique.contains("items/copper_sword.png"));
+        assertTrue(unique.contains("items/silver_sword.png"));
         assertTrue(unique.contains("items/copper_helmet.png"));
         assertTrue(unique.contains("items/copper_chestplate.png"));
         assertTrue(unique.contains("items/copper_boots.png"));

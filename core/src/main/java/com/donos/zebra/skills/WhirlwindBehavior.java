@@ -29,7 +29,7 @@ public final class WhirlwindBehavior implements SkillBehavior {
             float dist = Vector2.dst(
                 context.player.getX(), context.player.getY(), ent.getX(), ent.getY());
             if (dist <= RADIUS) {
-                ent.takeDamage(damage);
+                ((Enemy) ent).takeDamage(damage, null, SkillRegistry.WHIRLWIND_ID);
                 if (context.damageTexts != null) {
                     context.damageTexts.add(new DamageText(
                         ent.getX(), ent.getY() + 15f, "-" + (int) damage, Color.CYAN));

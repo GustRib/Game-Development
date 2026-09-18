@@ -18,6 +18,8 @@ class SkillBarTest extends HeadlessTestBase {
     void emptySlotsDoNothingAndAssignedSlotsActivate() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         player.grantFirstSword();
+        player.getSkillBook().unlock(SkillRegistry.WHIRLWIND_ID);
+        player.getSkillBook().unlock(SkillRegistry.FLAME_STRIKE_ID);
         SkillBook book = player.getSkillBook();
         book.getBar().clearSlot(2);
         book.getBar().clearSlot(3);

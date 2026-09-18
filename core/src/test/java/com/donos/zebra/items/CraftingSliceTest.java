@@ -233,7 +233,7 @@ class CraftingSliceTest {
     void gearIconsPointAtFinalArtPaths() {
         assertEquals("items/copper_ore.png", ItemRegistry.COPPER_ORE.getIconPath());
         assertEquals("items/iron_ore.png", ItemRegistry.IRON_ORE.getIconPath());
-        assertEquals("items/copper_sword.png", ItemRegistry.COPPER_LONGSWORD.getIconPath());
+        assertEquals("items/silver_sword.png", ItemRegistry.COPPER_LONGSWORD.getIconPath());
         assertEquals("items/copper_sword.png", ItemRegistry.IRON_SWORD.getIconPath());
         assertEquals("items/copper_helmet.png", ItemRegistry.COPPER_HELMET.getIconPath());
         assertEquals("items/copper_chestplate.png", ItemRegistry.COPPER_CHESTPLATE.getIconPath());

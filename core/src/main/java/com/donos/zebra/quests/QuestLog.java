@@ -2,6 +2,7 @@ package com.donos.zebra.quests;
 
 import com.donos.zebra.entities.MentorNpc;
 import com.donos.zebra.entities.Player;
+import com.donos.zebra.items.ItemDefinition;
 import com.donos.zebra.items.ItemRegistry;
 import com.donos.zebra.save.QuestSaveData;
 import com.donos.zebra.world.OpeningQuest;
@@ -22,6 +23,8 @@ public final class QuestLog {
     private final Map<String, QuestInstance> instances = new LinkedHashMap<>();
     private String trackedQuestId;
     private QuestLogListener listener;
+    /** Optional player for milestone unlock side-effects. */
+    private Player progressPlayer;
 
     public QuestLog() {
         for (QuestDefinition def : QuestRegistry.all()) {
@@ -35,6 +38,10 @@ public final class QuestLog {
 
     public QuestLogListener getListener() {
         return listener;
+    }
+
+    public void setProgressPlayer(Player progressPlayer) {
+        this.progressPlayer = progressPlayer;
     }
 
     public String getTrackedQuestId() {
@@ -76,6 +83,15 @@ public final class QuestLog {
         return list;
     }
 
+    public boolean isCompleted(String questId) {
+        QuestInstance qi = instances.get(questId);
+        return qi != null && qi.status == QuestStatus.COMPLETED;
+    }
+
+    public boolean isShopUnlocked() {
+        return isCompleted(QuestIds.QUEST_ORC_CLEANUP);
+    }
+
     public QuestInstance getTrackedInstance() {
         if (trackedQuestId == null) {
             return null;
@@ -101,18 +117,53 @@ public final class QuestLog {
         return def.getObjective(qi.currentObjectiveIndex);
     }
 
-    /** Current active objective of the tracked quest, or null. */
     public QuestObjectiveDefinition getCurrentObjective() {
         return getTrackedObjectiveDefinition();
     }
 
-    /** Progress row for {@link #getCurrentObjective()}, or null. */
     public QuestObjectiveProgress getCurrentObjectiveProgress() {
         QuestInstance qi = getTrackedInstance();
         return qi == null ? null : qi.getCurrentProgress();
     }
 
-    /** Starts a quest and tracks it if nothing else is tracked. */
+    /** Next inactive mentor-chain quest whose prerequisite is met, or null. */
+    public QuestDefinition findOfferableMentorQuest() {
+        for (String id : QuestRegistry.MENTOR_CHAIN_AFTER_FIRST_SWORD) {
+            QuestDefinition def = QuestRegistry.get(id);
+            QuestInstance qi = instances.get(id);
+            if (def == null || qi == null) {
+                continue;
+            }
+            if (qi.status != QuestStatus.INACTIVE) {
+                continue;
+            }
+            if (QuestRegistry.isPrerequisiteMet(this, def)) {
+                return def;
+            }
+        }
+        return null;
+    }
+
+    /** Active mentor-chain quest waiting on a talk turn-in with the mentor, or null. */
+    public QuestDefinition findActiveMentorTurnIn() {
+        for (QuestInstance qi : instances.values()) {
+            if (qi.status != QuestStatus.ACTIVE) {
+                continue;
+            }
+            QuestDefinition def = QuestRegistry.get(qi.questId);
+            if (def == null) {
+                continue;
+            }
+            QuestObjectiveDefinition obj = def.getObjective(qi.currentObjectiveIndex);
+            if (obj != null
+                && obj.type == QuestObjectiveType.TALK_TO_NPC
+                && QuestIds.NPC_MENTOR.equals(obj.targetId)) {
+                return def;
+            }
+        }
+        return null;
+    }
+
     public void startQuest(String questId) {
         QuestDefinition def = QuestRegistry.get(questId);
         QuestInstance qi = instances.get(questId);
@@ -127,8 +178,11 @@ public final class QuestLog {
         for (QuestObjectiveProgress p : qi.objectives) {
             p.currentAmount = 0;
             p.completed = false;
+            p.firedMilestones.clear();
         }
         if (trackedQuestId == null) {
+            setTrackedQuestId(questId);
+        } else {
             setTrackedQuestId(questId);
         }
         if (listener != null) {
@@ -140,38 +194,71 @@ public final class QuestLog {
         if (itemId == null || amount <= 0) {
             return;
         }
-        applyEvent(QuestObjectiveType.COLLECT_ITEM, itemId, amount);
+        applyEvent(QuestObjectiveType.COLLECT_ITEM, itemId, amount, null, null);
     }
 
     public void reportTalkNpc(String npcId) {
         if (npcId == null) {
             return;
         }
-        applyEvent(QuestObjectiveType.TALK_TO_NPC, npcId, 1);
+        applyEvent(QuestObjectiveType.TALK_TO_NPC, npcId, 1, null, null);
     }
 
     public void reportCraftItem(String itemId) {
         if (itemId == null) {
             return;
         }
-        applyEvent(QuestObjectiveType.CRAFT_ITEM, itemId, 1);
+        applyEvent(QuestObjectiveType.CRAFT_ITEM, itemId, 1, null, null);
     }
 
     public void reportKillEnemy(String enemyId) {
+        reportKillEnemy(enemyId, null, null);
+    }
+
+    public void reportKillEnemy(String enemyId, String weaponItemId, String skillId) {
         if (enemyId == null) {
             return;
         }
-        applyEvent(QuestObjectiveType.KILL_ENEMY, enemyId, 1);
+        applyEvent(QuestObjectiveType.KILL_ENEMY, enemyId, 1, weaponItemId, skillId);
     }
 
     public void reportReachLocation(String locationId) {
         if (locationId == null) {
             return;
         }
-        applyEvent(QuestObjectiveType.REACH_LOCATION, locationId, 1);
+        applyEvent(QuestObjectiveType.REACH_LOCATION, locationId, 1, null, null);
     }
 
-    private void applyEvent(QuestObjectiveType type, String targetId, int amount) {
+    /**
+     * Grants {@link QuestDefinition#reward} to the player (silver, items, unlocks).
+     */
+    public void grantReward(QuestDefinition def, Player player) {
+        if (def == null || def.reward == null || player == null) {
+            return;
+        }
+        QuestReward reward = def.reward;
+        if (reward.silver > 0) {
+            player.getWallet().addSilver(reward.silver);
+        }
+        for (QuestReward.ItemGrant grant : reward.items) {
+            ItemDefinition item = ItemRegistry.getItem(grant.itemId);
+            if (item != null) {
+                player.getInventory().addItem(item, grant.quantity);
+            }
+        }
+        for (String recipeId : reward.unlockRecipeIds) {
+            player.unlockRecipe(recipeId);
+        }
+        for (String skillId : reward.unlockSkillIds) {
+            player.getSkillBook().unlock(skillId);
+        }
+    }
+
+    private void applyEvent(QuestObjectiveType type,
+                            String targetId,
+                            int amount,
+                            String weaponItemId,
+                            String skillId) {
         for (QuestInstance qi : instances.values()) {
             if (qi.status != QuestStatus.ACTIVE) {
                 continue;
@@ -191,14 +278,63 @@ public final class QuestLog {
             if (!targetId.equals(objDef.targetId)) {
                 continue;
             }
+            if (type == QuestObjectiveType.KILL_ENEMY) {
+                if (objDef.weaponItemId != null
+                    && (weaponItemId == null || !objDef.weaponItemId.equals(weaponItemId))) {
+                    continue;
+                }
+                if (objDef.skillId != null
+                    && (skillId == null || !objDef.skillId.equals(skillId))) {
+                    continue;
+                }
+            }
             int before = progress.currentAmount;
             progress.currentAmount = Math.min(objDef.requiredAmount, progress.currentAmount + amount);
-            if (progress.currentAmount != before && listener != null) {
-                listener.onObjectiveProgress(def, objDef, progress.currentAmount, objDef.requiredAmount);
+            if (progress.currentAmount != before) {
+                fireMilestones(def, objDef, progress);
+                if (listener != null) {
+                    listener.onObjectiveProgress(def, objDef, progress.currentAmount, objDef.requiredAmount);
+                }
             }
             if (progress.currentAmount >= objDef.requiredAmount) {
                 completeCurrentObjective(qi, def, objDef, progress);
             }
+        }
+    }
+
+    private void fireMilestones(QuestDefinition def,
+                                QuestObjectiveDefinition objDef,
+                                QuestObjectiveProgress progress) {
+        if (objDef.progressMilestones.isEmpty()) {
+            return;
+        }
+        for (QuestProgressMilestone milestone : objDef.progressMilestones) {
+            if (progress.currentAmount < milestone.atAmount) {
+                continue;
+            }
+            if (!progress.firedMilestones.add(milestone.atAmount)) {
+                continue;
+            }
+            applyMilestoneEffect(milestone);
+            if (listener != null) {
+                listener.onProgressMilestone(def, objDef, milestone);
+            }
+        }
+    }
+
+    private void applyMilestoneEffect(QuestProgressMilestone milestone) {
+        if (progressPlayer == null || milestone == null) {
+            return;
+        }
+        switch (milestone.effect) {
+            case UNLOCK_SKILL:
+                progressPlayer.getSkillBook().unlock(milestone.targetId);
+                break;
+            case UNLOCK_RECIPE:
+                progressPlayer.unlockRecipe(milestone.targetId);
+                break;
+            default:
+                break;
         }
     }
 
@@ -208,6 +344,8 @@ public final class QuestLog {
                                           QuestObjectiveProgress progress) {
         progress.completed = true;
         progress.currentAmount = objDef.requiredAmount;
+        // Ensure milestones at requiredAmount still fire if not already
+        fireMilestones(def, objDef, progress);
         int next = qi.currentObjectiveIndex + 1;
         if (next >= def.objectives.size()) {
             qi.status = QuestStatus.COMPLETED;
@@ -215,7 +353,6 @@ public final class QuestLog {
             if (trackedQuestId != null && trackedQuestId.equals(qi.questId)) {
                 trackedQuestId = nextActiveQuestId();
             }
-            // Notify after domain state is fully updated so UI sees the final objective / completion.
             if (listener != null) {
                 listener.onObjectiveCompleted(def, objDef);
                 if (trackedQuestId == null || !trackedQuestId.equals(qi.questId)) {
@@ -240,10 +377,6 @@ public final class QuestLog {
         return null;
     }
 
-    /**
-     * Aligns quest state with mentor/sword/inventory after load or bootstrap
-     * without inventing new story beats.
-     */
     public void syncFromWorld(Player player, MentorNpc mentor) {
         QuestInstance qi = instances.get(QuestIds.QUEST_FIRST_SWORD);
         QuestDefinition def = QuestRegistry.FIRST_SWORD;
@@ -281,7 +414,6 @@ public final class QuestLog {
             return;
         }
 
-        // Pickaxe given: intro talk done
         markCompleted(qi, def, 0);
         if (copper >= OpeningQuest.COPPER_ORE_REQUIRED) {
             markCompleted(qi, def, 1);
@@ -296,6 +428,7 @@ public final class QuestLog {
             for (int i = 2; i < qi.objectives.size(); i++) {
                 qi.objectives.get(i).currentAmount = 0;
                 qi.objectives.get(i).completed = false;
+                qi.objectives.get(i).firedMilestones.clear();
             }
         }
     }
@@ -311,6 +444,7 @@ public final class QuestLog {
         for (int i = fromIndex; i < qi.objectives.size(); i++) {
             qi.objectives.get(i).currentAmount = 0;
             qi.objectives.get(i).completed = false;
+            qi.objectives.get(i).firedMilestones.clear();
         }
     }
 
@@ -323,17 +457,19 @@ public final class QuestLog {
         if (tracked != null) {
             data.currentObjectiveIndex = tracked.currentObjectiveIndex;
             data.objectiveProgress = new int[tracked.objectives.size()];
-            for (int i = 0; i < tracked.objectives.size(); i++) {
-                data.objectiveProgress[i] = tracked.objectives.get(i).currentAmount;
-            }
             data.objectiveCompleted = new boolean[tracked.objectives.size()];
+            data.objectiveFiredMilestones = new String[tracked.objectives.size()];
             for (int i = 0; i < tracked.objectives.size(); i++) {
-                data.objectiveCompleted[i] = tracked.objectives.get(i).completed;
+                QuestObjectiveProgress p = tracked.objectives.get(i);
+                data.objectiveProgress[i] = p.currentAmount;
+                data.objectiveCompleted[i] = p.completed;
+                data.objectiveFiredMilestones[i] = encodeMilestones(p);
             }
         } else {
             data.currentObjectiveIndex = 0;
             data.objectiveProgress = null;
             data.objectiveCompleted = null;
+            data.objectiveFiredMilestones = null;
         }
         List<String> completed = new ArrayList<>();
         for (QuestInstance qi : instances.values()) {
@@ -345,7 +481,6 @@ public final class QuestLog {
     }
 
     public void readFromSave(QuestSaveData data, Player player, MentorNpc mentor) {
-        // Prefer world flags for opening quest integrity, then overlay saved counters.
         syncFromWorld(player, mentor);
         if (data == null) {
             return;
@@ -368,12 +503,12 @@ public final class QuestLog {
         }
         if (data.activeQuestId != null && instances.containsKey(data.activeQuestId)) {
             QuestInstance qi = instances.get(data.activeQuestId);
-            if (qi.status == QuestStatus.ACTIVE) {
+            if (qi.status != QuestStatus.COMPLETED) {
+                qi.status = QuestStatus.ACTIVE;
                 trackedQuestId = data.activeQuestId;
                 if (data.objectiveProgress != null
                     && data.objectiveProgress.length == qi.objectives.size()) {
                     for (int i = 0; i < qi.objectives.size(); i++) {
-                        // Do not regress opening-quest sync from world flags
                         if (QuestIds.QUEST_FIRST_SWORD.equals(qi.questId)) {
                             continue;
                         }
@@ -381,6 +516,10 @@ public final class QuestLog {
                         if (data.objectiveCompleted != null
                             && i < data.objectiveCompleted.length) {
                             qi.objectives.get(i).completed = data.objectiveCompleted[i];
+                        }
+                        if (data.objectiveFiredMilestones != null
+                            && i < data.objectiveFiredMilestones.length) {
+                            decodeMilestones(qi.objectives.get(i), data.objectiveFiredMilestones[i]);
                         }
                     }
                 }
@@ -393,6 +532,35 @@ public final class QuestLog {
         }
         if (trackedQuestId == null) {
             trackedQuestId = nextActiveQuestId();
+        }
+    }
+
+    private static String encodeMilestones(QuestObjectiveProgress p) {
+        if (p.firedMilestones.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        for (Integer v : p.firedMilestones) {
+            if (!first) {
+                sb.append(',');
+            }
+            sb.append(v);
+            first = false;
+        }
+        return sb.toString();
+    }
+
+    private static void decodeMilestones(QuestObjectiveProgress p, String encoded) {
+        p.firedMilestones.clear();
+        if (encoded == null || encoded.isEmpty()) {
+            return;
+        }
+        for (String part : encoded.split(",")) {
+            try {
+                p.firedMilestones.add(Integer.parseInt(part.trim()));
+            } catch (NumberFormatException ignored) {
+            }
         }
     }
 }

@@ -79,6 +79,9 @@ public final class SaveService {
             if (!isStructurallyValid(data)) {
                 return null;
             }
+            if (data.version == 1) {
+                migrateV1ToV2(data);
+            }
             if (data.version != CURRENT_VERSION) {
                 Gdx.app.error("SaveService", "Unsupported save version: " + data.version);
                 return null;
@@ -91,6 +94,35 @@ public final class SaveService {
             Gdx.app.error("SaveService", "Failed to parse save: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * v1 → v2: add recipe/skill unlock lists.
+     * Migration: if the player already had First Sword (pre-nerf era where skills and
+     * iron recipe were always available), keep them unlocked. Otherwise leave locked.
+     */
+    public static void migrateV1ToV2(SaveData data) {
+        if (data == null || data.player == null) {
+            return;
+        }
+        if (data.player.unlockedRecipeIds == null) {
+            data.player.unlockedRecipeIds = new java.util.ArrayList<>();
+        }
+        if (data.player.unlockedSkillIds == null) {
+            data.player.unlockedSkillIds = new java.util.ArrayList<>();
+        }
+        if (data.player.hasFirstSword) {
+            if (!data.player.unlockedRecipeIds.contains(com.donos.zebra.quests.QuestIds.RECIPE_IRON_SWORD)) {
+                data.player.unlockedRecipeIds.add(com.donos.zebra.quests.QuestIds.RECIPE_IRON_SWORD);
+            }
+            if (!data.player.unlockedSkillIds.contains(com.donos.zebra.skills.SkillRegistry.WHIRLWIND_ID)) {
+                data.player.unlockedSkillIds.add(com.donos.zebra.skills.SkillRegistry.WHIRLWIND_ID);
+            }
+            if (!data.player.unlockedSkillIds.contains(com.donos.zebra.skills.SkillRegistry.FLAME_STRIKE_ID)) {
+                data.player.unlockedSkillIds.add(com.donos.zebra.skills.SkillRegistry.FLAME_STRIKE_ID);
+            }
+        }
+        data.version = SaveData.CURRENT_VERSION;
     }
 
     public static boolean isStructurallyValid(SaveData data) {

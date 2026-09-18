@@ -20,7 +20,8 @@ class CraftingJobTest {
         inv.addItem(ItemRegistry.IRON_ORE, 20);
 
         CraftingController controller = new CraftingController();
-        assertTrue(controller.tryStart(CraftingRecipes.COPPER_LONGSWORD, inv));
+        assertTrue(controller.tryStart(
+            CraftingRecipes.COPPER_LONGSWORD, inv, java.util.Set.of(CraftingRecipes.COPPER_LONGSWORD.getId())));
         assertEquals(0, inv.getItemCount(ItemRegistry.COPPER_ORE));
         assertEquals(0, inv.getItemCount(ItemRegistry.IRON_ORE));
         assertEquals(0, inv.getItemCount(ItemRegistry.COPPER_LONGSWORD));

@@ -21,6 +21,7 @@ class WhirlwindSkillTest extends HeadlessTestBase {
     void damagesEnemiesInsideRadiusOnly() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         player.grantFirstSword();
+        player.getSkillBook().unlock(SkillRegistry.WHIRLWIND_ID);
         player.setPosition(100f, 100f);
 
         Orc near = new Orc(100f + WhirlwindBehavior.RADIUS - 2f, 100f,

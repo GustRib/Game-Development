@@ -82,9 +82,6 @@ public class SkillMenuUI extends GameWindow {
         dragAndDrop.clear();
         boolean first = true;
         for (SkillRuntime runtime : skillBook.allRuntimes()) {
-            if (!runtime.isUnlocked()) {
-                continue;
-            }
             if (!first) {
                 Table separator = new Table();
                 separator.setBackground(solid(new Color(0.3f, 0.3f, 0.36f, 0.7f)));
@@ -92,9 +89,12 @@ public class SkillMenuUI extends GameWindow {
             }
             first = false;
             SkillDefinition def = runtime.getDefinition();
-            Table row = buildSkillRow(def);
+            boolean unlocked = runtime.isUnlocked();
+            Table row = buildSkillRow(def, unlocked);
             listTable.add(row).growX().padBottom(8).row();
-            wireMenuSource(row, def);
+            if (unlocked) {
+                wireMenuSource(row, def);
+            }
         }
         if (skillBarUI != null) {
             wireBarTargets();
@@ -102,54 +102,78 @@ public class SkillMenuUI extends GameWindow {
         }
     }
 
-    private Table buildSkillRow(SkillDefinition def) {
+    private Table buildSkillRow(SkillDefinition def, boolean unlocked) {
         Table row = new Table();
-        row.setBackground(solid(new Color(0.14f, 0.14f, 0.2f, 0.95f)));
+        row.setBackground(solid(unlocked
+            ? new Color(0.14f, 0.14f, 0.2f, 0.95f)
+            : new Color(0.1f, 0.1f, 0.12f, 0.95f)));
         row.pad(16, 18, 16, 18);
 
         Image icon = SkillIcons.image(assetManager, def, ICON_SIZE);
+        if (!unlocked) {
+            icon.setColor(0.45f, 0.45f, 0.5f, 1f);
+        }
         row.add(icon).size(ICON_SIZE).padRight(18).top();
 
         Table text = new Table();
         text.left();
 
+        Table nameRow = new Table();
         Label name = new Label(def.getName(), skin);
-        name.setColor(new Color(0.95f, 0.85f, 0.4f, 1f));
-        text.add(name).left().padBottom(8).row();
+        name.setColor(unlocked
+            ? new Color(0.95f, 0.85f, 0.4f, 1f)
+            : new Color(0.6f, 0.6f, 0.65f, 1f));
+        nameRow.add(name).left();
+        if (!unlocked) {
+            Label locked = new Label("  BLOQUEADO", skin);
+            locked.setColor(new Color(0.9f, 0.55f, 0.35f, 1f));
+            nameRow.add(locked).left().padLeft(6);
+        }
+        text.add(nameRow).left().padBottom(8).row();
 
         Label desc = new Label(def.getDescription(), skin);
         desc.setWrap(true);
-        desc.setColor(Color.LIGHT_GRAY);
+        desc.setColor(unlocked ? Color.LIGHT_GRAY : Color.DARK_GRAY);
         text.add(desc).width(DESC_WIDTH).left().padBottom(10).row();
 
         if (def.getEffectSummary() != null && !def.getEffectSummary().isEmpty()) {
             Label effect = new Label(def.getEffectSummary(), skin);
             effect.setWrap(true);
-            effect.setColor(new Color(0.75f, 0.8f, 0.9f, 1f));
+            effect.setColor(unlocked
+                ? new Color(0.75f, 0.8f, 0.9f, 1f)
+                : new Color(0.45f, 0.45f, 0.5f, 1f));
             text.add(effect).width(DESC_WIDTH).left().padBottom(8).row();
         }
 
-        Label cd = new Label("Recarga: " + SkillDefinition.formatCooldown(def.getCooldownSeconds()), skin);
-        cd.setColor(new Color(0.85f, 0.78f, 0.45f, 1f));
+        Label cd = new Label(
+            unlocked
+                ? ("Recarga: " + SkillDefinition.formatCooldown(def.getCooldownSeconds()))
+                : "Desbloqueie via quests",
+            skin);
+        cd.setColor(unlocked
+            ? new Color(0.85f, 0.78f, 0.45f, 1f)
+            : new Color(0.55f, 0.5f, 0.4f, 1f));
         text.add(cd).left();
 
         row.add(text).growX().top().left();
 
-        row.addListener(new ClickListener() {
-            @Override
-            public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-                if (tooltipPanel != null) {
-                    tooltipPanel.showFor(def, row);
+        if (unlocked) {
+            row.addListener(new ClickListener() {
+                @Override
+                public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                    if (tooltipPanel != null) {
+                        tooltipPanel.showFor(def, row);
+                    }
                 }
-            }
 
-            @Override
-            public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-                if (tooltipPanel != null) {
-                    tooltipPanel.hide();
+                @Override
+                public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+                    if (tooltipPanel != null) {
+                        tooltipPanel.hide();
+                    }
                 }
-            }
-        });
+            });
+        }
         return row;
     }
 

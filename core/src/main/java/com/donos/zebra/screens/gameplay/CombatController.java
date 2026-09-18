@@ -64,12 +64,14 @@ public final class CombatController {
         }
 
         float damage = player.getAttackDamage();
+        String weaponId = player.getEquippedWeapon() != null
+            ? player.getEquippedWeapon().getId() : null;
         for (int i = entities.size() - 1; i >= 0; i--) {
             Entity ent = entities.get(i);
             if (ent instanceof Enemy && !ent.isDead()) {
                 float distance = Vector2.dst(player.getX(), player.getY(), ent.getX(), ent.getY());
                 if (distance <= ATTACK_RANGE) {
-                    ent.takeDamage(damage);
+                    ((Enemy) ent).takeDamage(damage, weaponId, null);
                     damageTexts.add(new DamageText(
                         ent.getX(), ent.getY() + 15f, "-" + (int) damage, Color.RED));
                 }

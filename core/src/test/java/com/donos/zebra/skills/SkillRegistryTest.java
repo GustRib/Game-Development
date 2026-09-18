@@ -42,10 +42,13 @@ class SkillRegistryTest extends HeadlessTestBase {
     }
 
     @Test
-    void bothSkillsUnlockedInitiallyInSkillBook() {
+    void bothSkillsLockedInitiallyInSkillBook() {
         SkillBook book = new SkillBook();
+        assertFalse(book.getRuntime(SkillRegistry.WHIRLWIND_ID).isUnlocked());
+        assertFalse(book.getRuntime(SkillRegistry.FLAME_STRIKE_ID).isUnlocked());
+        assertEquals(0, book.unlockedDefinitions().size());
+        book.unlock(SkillRegistry.WHIRLWIND_ID);
         assertTrue(book.getRuntime(SkillRegistry.WHIRLWIND_ID).isUnlocked());
-        assertTrue(book.getRuntime(SkillRegistry.FLAME_STRIKE_ID).isUnlocked());
-        assertEquals(2, book.unlockedDefinitions().size());
+        assertEquals(1, book.unlockedDefinitions().size());
     }
 }

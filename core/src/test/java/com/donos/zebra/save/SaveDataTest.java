@@ -33,7 +33,7 @@ class SaveDataTest extends HeadlessTestBase {
         assertTrue(saveService.writeSlot(1, data));
         SaveData loaded = saveService.readSlot(1);
         assertNotNull(loaded);
-        assertEquals(1, loaded.version);
+        assertEquals(SaveData.CURRENT_VERSION, loaded.version);
         saveService.clearAllSlots();
     }
 

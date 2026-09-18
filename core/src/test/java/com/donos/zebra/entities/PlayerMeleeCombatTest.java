@@ -73,6 +73,7 @@ class PlayerMeleeCombatTest {
         input.simulateMovement(1f, 0f);
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.grantFirstSword();
+        player.getSkillBook().unlock(SkillRegistry.FLAME_STRIKE_ID);
         player.setPosition(100f, 100f);
 
         SkillCaster caster = new SkillCaster();
@@ -99,6 +100,7 @@ class PlayerMeleeCombatTest {
         input.clearMovement();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
         player.grantFirstSword();
+        player.getSkillBook().unlock(SkillRegistry.WHIRLWIND_ID);
 
         SkillCaster caster = new SkillCaster();
         SkillCastContext ctx = new SkillCastContext(player, new ArrayList<>(), new ArrayList<>());

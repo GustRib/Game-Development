@@ -8,6 +8,7 @@ import java.util.List;
 
 /**
  * Periodic fire DoT. Designed so Poison/Bleed can mirror this pattern later.
+ * When applied by Flame Strike, DoT kills inherit that skill attribution.
  */
 public final class BurningStatus implements StatusEffect {
 
@@ -20,16 +21,30 @@ public final class BurningStatus implements StatusEffect {
     private float tickInterval;
     private float damagePerTick;
     private float tickAccumulator;
+    private final String sourceSkillId;
 
     public BurningStatus() {
-        this(DEFAULT_DURATION, DEFAULT_TICK_INTERVAL, DEFAULT_DAMAGE_PER_TICK);
+        this(DEFAULT_DURATION, DEFAULT_TICK_INTERVAL, DEFAULT_DAMAGE_PER_TICK, null);
+    }
+
+    public BurningStatus(String sourceSkillId) {
+        this(DEFAULT_DURATION, DEFAULT_TICK_INTERVAL, DEFAULT_DAMAGE_PER_TICK, sourceSkillId);
     }
 
     public BurningStatus(float duration, float tickInterval, float damagePerTick) {
+        this(duration, tickInterval, damagePerTick, null);
+    }
+
+    public BurningStatus(float duration, float tickInterval, float damagePerTick, String sourceSkillId) {
         this.remainingDuration = Math.max(0f, duration);
         this.tickInterval = Math.max(0.05f, tickInterval);
         this.damagePerTick = Math.max(0f, damagePerTick);
         this.tickAccumulator = 0f;
+        this.sourceSkillId = sourceSkillId;
+    }
+
+    public String getSourceSkillId() {
+        return sourceSkillId;
     }
 
     @Override
@@ -47,7 +62,11 @@ public final class BurningStatus implements StatusEffect {
         tickAccumulator += delta;
         while (tickAccumulator >= tickInterval && !target.isDead()) {
             tickAccumulator -= tickInterval;
-            target.takeDamage(damagePerTick);
+            if (sourceSkillId != null) {
+                target.takeDamage(damagePerTick, null, sourceSkillId);
+            } else {
+                target.takeDamage(damagePerTick);
+            }
             if (damageTexts != null) {
                 damageTexts.add(new DamageText(
                     target.getX(), target.getY() + 18f,
@@ -74,6 +93,7 @@ public final class BurningStatus implements StatusEffect {
         this.tickInterval = burn.tickInterval;
         this.damagePerTick = burn.damagePerTick;
         this.tickAccumulator = 0f;
+        // sourceSkillId is final — keep original attribution on refresh
     }
 
     public float getRemainingDuration() {

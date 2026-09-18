@@ -60,7 +60,7 @@ public class ItemRegistry {
             0
         );
 
-        // Station-crafted upgrade — Espada de Ferro (no distinct iron_sword.png yet; reuse copper art).
+        // Station-crafted upgrade — Espada de Ferro (silver_sword art).
         // Damage 24: meaningful upgrade over starter (10) and old craft (16) for ~4× material cost.
         COPPER_LONGSWORD = new ItemDefinition(
             "iron_sword",
@@ -70,7 +70,7 @@ public class ItemRegistry {
             1,
             200,
             false,
-            "items/copper_sword.png",
+            "items/silver_sword.png",
             24,
             0
         );

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Static catalog of skills. Both starter skills are unlocked by default.
+ * Static catalog of skills. Starter skills begin locked; quests unlock them.
  */
 public final class SkillRegistry {
 

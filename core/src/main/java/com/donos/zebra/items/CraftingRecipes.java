@@ -74,6 +74,20 @@ public final class CraftingRecipes {
             COPPER_LONGSWORD, COPPER_HELMET, COPPER_CHESTPLATE, COPPER_GLOVES, COPPER_BOOTS));
     }
 
+    public static boolean requiresUnlock(String recipeId) {
+        return COPPER_LONGSWORD.getId().equals(recipeId);
+    }
+
+    public static boolean isCraftable(CraftingRecipe recipe, java.util.Set<String> unlockedRecipeIds) {
+        if (recipe == null) {
+            return false;
+        }
+        if (!requiresUnlock(recipe.getId())) {
+            return true;
+        }
+        return unlockedRecipeIds != null && unlockedRecipeIds.contains(recipe.getId());
+    }
+
     private CraftingRecipes() {
     }
 

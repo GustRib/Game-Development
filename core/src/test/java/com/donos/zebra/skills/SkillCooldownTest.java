@@ -38,6 +38,7 @@ class SkillCooldownTest extends HeadlessTestBase {
     @Test
     void cooldownProgressesAndReachesReady() {
         SkillBook book = new SkillBook();
+        book.unlock(SkillRegistry.WHIRLWIND_ID);
         SkillRuntime runtime = book.getRuntime(SkillRegistry.WHIRLWIND_ID);
         runtime.startCooldown();
         assertFalse(runtime.isReady());
@@ -79,6 +80,8 @@ class SkillCooldownTest extends HeadlessTestBase {
     private static Player armedPlayer() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         player.grantFirstSword();
+        player.getSkillBook().unlock(SkillRegistry.WHIRLWIND_ID);
+        player.getSkillBook().unlock(SkillRegistry.FLAME_STRIKE_ID);
         return player;
     }
 }

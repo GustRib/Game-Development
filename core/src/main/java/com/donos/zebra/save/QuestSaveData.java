@@ -19,4 +19,5 @@ public class QuestSaveData {
     public boolean[] objectiveCompleted;
 
     public String[] completedQuestIds;
+    public String[] objectiveFiredMilestones;
 }

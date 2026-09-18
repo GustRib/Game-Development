@@ -24,6 +24,8 @@ public abstract class Enemy implements Entity {
     private boolean interactionHighlighted;
     private final com.donos.zebra.skills.StatusEffectController statusEffects =
         new com.donos.zebra.skills.StatusEffectController();
+    private String killWeaponItemId;
+    private String killSkillId;
 
     protected float speed;
     protected float aggroRange;
@@ -103,6 +105,28 @@ public abstract class Enemy implements Entity {
             currentHealth = 0;
             isDead = true;
         }
+    }
+
+    /**
+     * Damage with kill attribution for quest tracking.
+     */
+    public void takeDamage(float amount, String weaponItemId, String skillId) {
+        this.killWeaponItemId = weaponItemId;
+        this.killSkillId = skillId;
+        takeDamage(amount);
+    }
+
+    public String getKillWeaponItemId() {
+        return killWeaponItemId;
+    }
+
+    public String getKillSkillId() {
+        return killSkillId;
+    }
+
+    public void setKillAttribution(String weaponItemId, String skillId) {
+        this.killWeaponItemId = weaponItemId;
+        this.killSkillId = skillId;
     }
 
     /**

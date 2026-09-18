@@ -28,4 +28,8 @@ public class PlayerSaveData {
     public float outdoorReturnY;
     /** Skill bar slot IDs (length 4); null/empty entry = empty slot. */
     public java.util.List<String> skillBarSlotIds = new java.util.ArrayList<>();
+    /** Recipe ids the player has unlocked (e.g. recipe_iron_sword). */
+    public java.util.List<String> unlockedRecipeIds = new java.util.ArrayList<>();
+    /** Skill ids the player has unlocked. */
+    public java.util.List<String> unlockedSkillIds = new java.util.ArrayList<>();
 }

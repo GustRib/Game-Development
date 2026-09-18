@@ -16,8 +16,37 @@ public final class SkillBook {
 
     public SkillBook() {
         for (SkillDefinition def : SkillRegistry.all()) {
-            runtimes.put(def.getId(), new SkillRuntime(def, true));
+            runtimes.put(def.getId(), new SkillRuntime(def, false));
         }
+    }
+
+    public void unlock(String skillId) {
+        SkillRuntime runtime = runtimes.get(skillId);
+        if (runtime != null) {
+            runtime.setUnlocked(true);
+        }
+    }
+
+    public void setUnlockedSkills(Iterable<String> skillIds) {
+        for (SkillRuntime runtime : runtimes.values()) {
+            runtime.setUnlocked(false);
+        }
+        if (skillIds == null) {
+            return;
+        }
+        for (String id : skillIds) {
+            unlock(id);
+        }
+    }
+
+    public List<String> snapshotUnlockedSkillIds() {
+        List<String> list = new ArrayList<>();
+        for (SkillRuntime runtime : runtimes.values()) {
+            if (runtime.isUnlocked()) {
+                list.add(runtime.getDefinition().getId());
+            }
+        }
+        return list;
     }
 
     public SkillBar getBar() {
