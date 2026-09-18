@@ -32,6 +32,27 @@ configure(subprojects) {
 
   // From https://lyze.dev/2021/04/29/libGDX-Internal-Assets-List/
   // The article can be helpful when using assets.txt in your project.
+
+  test {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed", "failed", "skipped"
+    }
+
+  afterSuite { desc, result ->
+        if (!desc.parent) {
+            println ""
+            println "========================================"
+            println "TESTES: ${result.testCount}"
+            println "PASSOU: ${result.successfulTestCount}"
+            println "FALHOU: ${result.failedTestCount}"
+            println "PULADOS: ${result.skippedTestCount}"
+            println "========================================"
+        }
+    }
+  }
+
   tasks.register('generateAssetList') {
     inputs.dir("${project.rootDir}/assets/")
     // projectFolder/assets
