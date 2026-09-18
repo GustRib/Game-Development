@@ -1,15 +1,15 @@
 {
 "version": 1,
-"savedAtEpochMs": 1789754445536,
+"savedAtEpochMs": 1789756556557,
 "slotIndex": 1,
 "player": {
 	"characterName": "Sharkal",
-	"x": 347.0051,
-	"y": 643.175,
-	"currentHealth": 52,
+	"x": 608.18243,
+	"y": 89.36305,
+	"currentHealth": 54,
 	"maxHealth": 100,
 	"hasFirstSword": true,
-	"totalSilver": 43,
+	"totalSilver": 64,
 	"inventorySlots": [
 		{
 			"itemId": "stone_pickaxe",
@@ -21,7 +21,7 @@
 		},
 		{
 			"itemId": "iron_ore",
-			"quantity": 11
+			"quantity": 18
 		},
 		null,
 		null,
@@ -48,9 +48,9 @@
 	"equippedBootsId": "copper_boots",
 	"potionSlot": {
 		"itemId": "potion_medium",
-		"quantity": 3
+		"quantity": 2
 	},
-	"potionCooldownRemaining": 1.0327065,
+	"potionCooldownRemaining": 0,
 	"inTavern": false,
 	"outdoorReturnX": 124,
 	"outdoorReturnY": 720,
@@ -93,12 +93,12 @@
 		{
 			"spawnX": 115.3333,
 			"spawnY": 790,
-			"x": 115.3333,
-			"y": 790,
-			"currentHealth": 40,
+			"x": 191.97649,
+			"y": 775.5198,
+			"currentHealth": 0,
 			"maxHealth": 40,
-			"dead": false,
-			"deathTimer": 0,
+			"dead": true,
+			"deathTimer": 37.65615,
 			"looted": false,
 			"silverLoot": 7,
 			"loot": [
@@ -116,7 +116,7 @@
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 1.4744542,
+			"deathTimer": 58.075893,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -124,12 +124,12 @@
 		{
 			"spawnX": 650,
 			"spawnY": 150,
-			"x": 719.5159,
-			"y": 256.13757,
+			"x": 770.97076,
+			"y": 205.13303,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 45.57896,
+			"deathTimer": 14.201226,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -142,7 +142,7 @@
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 43.293365,
+			"deathTimer": 12.56415,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -150,12 +150,12 @@
 		{
 			"spawnX": 620,
 			"spawnY": 80,
-			"x": 678.7235,
-			"y": 65.986336,
+			"x": 631.0129,
+			"y": 89.59063,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 32.688667,
+			"deathTimer": 3.1960082,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []

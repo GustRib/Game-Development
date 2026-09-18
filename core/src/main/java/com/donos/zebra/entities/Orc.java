@@ -34,8 +34,9 @@ public class Orc extends Enemy {
 
     private static final float ATTACK_RANGE = 24f;
 
-    private float attackVisualTimer = 0f;
-    private static final float ATTACK_ANIM_DURATION = 0.6f;
+    private boolean isAttacking = false;
+    private boolean attackImpactApplied = false;
+    private float attackElapsed = 0f;
 
     private float deathTimer;
     private float highlightPulseTime;
@@ -104,10 +105,6 @@ public class Orc extends Enemy {
             hurtTimer -= delta;
         }
 
-        if (attackVisualTimer > 0) {
-            attackVisualTimer -= delta;
-        }
-
         if (attackCooldownTimer > 0) {
             attackCooldownTimer -= delta;
         }
@@ -115,7 +112,7 @@ public class Orc extends Enemy {
         float oldX = this.x;
         float oldY = this.y;
 
-        if (!player.isDead() && attackVisualTimer <= 0) {
+        if (!player.isDead() && !isAttacking) {
             chasePlayer(player, delta, collisionPolygons);
         }
 
@@ -125,17 +122,35 @@ public class Orc extends Enemy {
 
         float distanceToPlayer = com.badlogic.gdx.math.Vector2.dst(this.x, this.y, player.getX(), player.getY());
 
-        if (!player.isDead() && distanceToPlayer <= ATTACK_RANGE && attackCooldownTimer <= 0) {
+        if (isAttacking) {
+            attackElapsed += delta;
+            if (!attackImpactApplied && attackElapsed >= OrcAttackTiming.impactDelaySeconds()) {
+                attackImpactApplied = true;
+                float distAtImpact = com.badlogic.gdx.math.Vector2.dst(
+                    this.x, this.y, player.getX(), player.getY());
+                if (!player.isDead() && distAtImpact <= ATTACK_RANGE) {
+                    player.takeDamage(OrcAttackTiming.DAMAGE);
+                }
+            }
+            if (attackElapsed >= OrcAttackTiming.durationSeconds()) {
+                isAttacking = false;
+                attackElapsed = 0f;
+                attackImpactApplied = false;
+            }
+        } else if (!player.isDead()
+            && distanceToPlayer <= ATTACK_RANGE
+            && attackCooldownTimer <= 0) {
+            isAttacking = true;
+            attackElapsed = 0f;
+            attackImpactApplied = false;
             attackCooldownTimer = ATTACK_COOLDOWN;
-            attackVisualTimer = ATTACK_ANIM_DURATION;
-            player.takeDamage(15f);
             this.stateTime = 0f;
         }
 
         if (animations != null) {
             if (hurtTimer > 0 && animations.containsKey("hurt")) {
                 this.currentAnimation = animations.get("hurt");
-            } else if (attackVisualTimer > 0 && animations.containsKey(AnimationConstants.ANIM_ATTACK)) {
+            } else if (isAttacking && animations.containsKey(AnimationConstants.ANIM_ATTACK)) {
                 this.currentAnimation = animations.get(AnimationConstants.ANIM_ATTACK);
             } else if (moving) {
                 if (Math.abs(dx) > Math.abs(dy)) {
@@ -160,7 +175,9 @@ public class Orc extends Enemy {
         hitbox.setPosition(x, y);
         stateTime = 0f;
         hurtTimer = 0f;
-        attackVisualTimer = 0f;
+        isAttacking = false;
+        attackElapsed = 0f;
+        attackImpactApplied = false;
         attackCooldownTimer = 0f;
         highlightPulseTime = 0f;
         setInteractionHighlighted(false);
@@ -204,7 +221,9 @@ public class Orc extends Enemy {
         }
         stateTime = 0f;
         hurtTimer = 0f;
-        attackVisualTimer = 0f;
+        isAttacking = false;
+        attackElapsed = 0f;
+        attackImpactApplied = false;
         attackCooldownTimer = 0f;
         highlightPulseTime = 0f;
         setInteractionHighlighted(false);
@@ -227,7 +246,9 @@ public class Orc extends Enemy {
         if (!isDead) {
             this.hurtTimer = HURT_DURATION;
             this.stateTime = 0f;
-            this.attackVisualTimer = 0f;
+            this.isAttacking = false;
+            this.attackElapsed = 0f;
+            this.attackImpactApplied = false;
         }
     }
 

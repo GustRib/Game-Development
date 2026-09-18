@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.entities.AnimationConstants;
 import com.donos.zebra.entities.DamageText;
 import com.donos.zebra.entities.Entity;
+import com.donos.zebra.entities.MeleeAttackTiming;
 import com.donos.zebra.entities.Orc;
 import com.donos.zebra.entities.Player;
 import com.donos.zebra.entities.StubPlayerInput;
@@ -195,6 +196,7 @@ class CraftingSliceTest {
         player.setPosition(100f, 100f);
         player.update(0.016f, new Array<>());
         assertEquals(AnimationConstants.ANIM_ATTACK, player.getCurrentAnimationKey());
+        player.update(MeleeAttackTiming.standingImpactDelaySeconds(), new Array<>());
 
         Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
         List<Entity> entities = new ArrayList<>();
@@ -202,7 +204,7 @@ class CraftingSliceTest {
         List<DamageText> damageTexts = new ArrayList<>();
 
         float healthBefore = orc.getCurrentHealth();
-        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
         assertEquals(healthBefore - 24f, orc.getCurrentHealth(), 0.01f);
     }
 
@@ -222,7 +224,7 @@ class CraftingSliceTest {
         List<DamageText> damageTexts = new ArrayList<>();
         float healthBefore = orc.getCurrentHealth();
 
-        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
         assertEquals(healthBefore, orc.getCurrentHealth(), 0.01f);
         assertEquals(1, damageTexts.size());
     }

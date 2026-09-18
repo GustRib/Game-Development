@@ -1,6 +1,5 @@
 package com.donos.zebra.screens.gameplay;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -9,7 +8,6 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import com.donos.zebra.entities.AnimationConstants;
 import com.donos.zebra.entities.DamageText;
 import com.donos.zebra.entities.Enemy;
 import com.donos.zebra.entities.Entity;
@@ -40,33 +38,22 @@ public final class CombatController {
         return ATTACK_DAMAGE;
     }
 
-    public static void resolvePlayerMelee(Player player, List<Entity> entities, List<DamageText> damageTexts) {
-        resolvePlayerMelee(player, entities, damageTexts, Gdx.input.justTouched());
-    }
-
     /**
-     * Testable overload: {@code attackJustPressed} replaces {@code Gdx.input.justTouched()}.
+     * Applies melee damage once when the current attack reaches its impact frame.
+     * Input clicks only start attacks on the player; they never deal damage here.
      */
-    public static void resolvePlayerMelee(Player player,
-                                          List<Entity> entities,
-                                          List<DamageText> damageTexts,
-                                          boolean attackJustPressed) {
+    public static void resolvePlayerMelee(Player player, List<Entity> entities, List<DamageText> damageTexts) {
         if (player.isInteracting()) {
             return;
         }
 
-        // Shared gate: unarmed click never starts the attack anim (Player.update);
-        // surface the same warning here so feedback stays in one combat path.
         if (player.consumeUnarmedAttackFeedback()) {
             damageTexts.add(new DamageText(
                 player.getX(), player.getY() + 18f, "Precisa de uma arma!", Color.YELLOW));
             return;
         }
 
-        if (!player.getCurrentAnimationKey().equals(AnimationConstants.ANIM_ATTACK)) {
-            return;
-        }
-        if (!attackJustPressed) {
+        if (!player.consumeMeleeImpact()) {
             return;
         }
 
@@ -88,6 +75,17 @@ public final class CombatController {
                 }
             }
         }
+    }
+
+    /**
+     * @deprecated Prefer {@link #resolvePlayerMelee(Player, List, List)}; click flags no longer deal damage.
+     */
+    @Deprecated
+    public static void resolvePlayerMelee(Player player,
+                                          List<Entity> entities,
+                                          List<DamageText> damageTexts,
+                                          boolean ignoredAttackJustPressed) {
+        resolvePlayerMelee(player, entities, damageTexts);
     }
 
     public static void updateEntities(Player player,

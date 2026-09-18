@@ -10,21 +10,36 @@ public class TestAnimationFactory {
 
     public static Map<String, Animation<TextureRegion>[]> createDirectionalAnimations() {
         Map<String, Animation<TextureRegion>[]> animations = new HashMap<>();
-        animations.put(AnimationConstants.ANIM_IDLE, createRowAnimations(4, 1, Animation.PlayMode.LOOP));
-        animations.put(AnimationConstants.ANIM_WALK, createRowAnimations(4, 1, Animation.PlayMode.LOOP));
-        animations.put(AnimationConstants.ANIM_RUN, createRowAnimations(4, 1, Animation.PlayMode.LOOP));
-        animations.put(AnimationConstants.ANIM_ATTACK, createRowAnimations(4, 1, Animation.PlayMode.NORMAL));
-        animations.put("hurt", createRowAnimations(4, 1, Animation.PlayMode.NORMAL));
-        animations.put("death", createRowAnimations(4, 1, Animation.PlayMode.NORMAL));
+        animations.put(AnimationConstants.ANIM_IDLE, createRowAnimations(4, 1, 0.1f, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_WALK, createRowAnimations(4, 1, 0.1f, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_RUN, createRowAnimations(4, 1, 0.1f, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_ATTACK, createRowAnimations(
+            4, MeleeAttackTiming.STANDING_FRAME_COUNT,
+            AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
+        animations.put(AnimationConstants.ANIM_WALK_ATTACK, createRowAnimations(
+            4, MeleeAttackTiming.WALK_FRAME_COUNT,
+            AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
+        animations.put("hurt", createRowAnimations(4, 1, 0.1f, Animation.PlayMode.NORMAL));
+        animations.put("death", createRowAnimations(4, 1, 0.1f, Animation.PlayMode.NORMAL));
         return animations;
     }
 
     public static Map<String, Animation<TextureRegion>[]> createOrcAnimations() {
-        return createDirectionalAnimations();
+        Map<String, Animation<TextureRegion>[]> animations = new HashMap<>();
+        animations.put(AnimationConstants.ANIM_IDLE, createRowAnimations(4, 1, 0.1f, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_WALK, createRowAnimations(4, 1, 0.1f, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_RUN, createRowAnimations(4, 1, 0.1f, Animation.PlayMode.LOOP));
+        animations.put(AnimationConstants.ANIM_ATTACK, createRowAnimations(
+            4, OrcAttackTiming.FRAME_COUNT,
+            AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
+        animations.put("hurt", createRowAnimations(4, 1, 0.1f, Animation.PlayMode.NORMAL));
+        animations.put("death", createRowAnimations(4, 1, 0.1f, Animation.PlayMode.NORMAL));
+        return animations;
     }
 
     @SuppressWarnings("unchecked")
-    private static Animation<TextureRegion>[] createRowAnimations(int rows, int cols, Animation.PlayMode mode) {
+    private static Animation<TextureRegion>[] createRowAnimations(
+        int rows, int cols, float frameDuration, Animation.PlayMode mode) {
         Animation<TextureRegion>[] anims = new Animation[rows];
         TextureRegion placeholder = new TextureRegion();
         for (int r = 0; r < rows; r++) {
@@ -32,7 +47,7 @@ public class TestAnimationFactory {
             for (int c = 0; c < cols; c++) {
                 frames[c] = placeholder;
             }
-            anims[r] = new Animation<>(0.1f, frames);
+            anims[r] = new Animation<>(frameDuration, frames);
             anims[r].setPlayMode(mode);
         }
         return anims;

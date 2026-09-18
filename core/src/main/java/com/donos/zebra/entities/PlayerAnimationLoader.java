@@ -35,8 +35,7 @@ public class PlayerAnimationLoader {
         assetManager.load(AnimationConstants.WALK_SHEET_PATH, Texture.class);
         assetManager.load(AnimationConstants.RUN_SHEET_PATH, Texture.class);
         assetManager.load(AnimationConstants.ATTACK_SHEET_PATH, Texture.class);
-        
-        // CORRIGIDO: Agora aponta para a pasta correta "characters/Player1/..." via constantes
+        assetManager.load(AnimationConstants.WALK_ATTACK_SHEET_PATH, Texture.class);
         assetManager.load(AnimationConstants.HURT_SHEET_PATH, Texture.class);
         assetManager.load(AnimationConstants.DEATH_SHEET_PATH, Texture.class);
     }
@@ -65,8 +64,10 @@ public class PlayerAnimationLoader {
         animations.put(AnimationConstants.ANIM_ATTACK,
             loadDirectional(assetManager, AnimationConstants.ATTACK_SHEET_PATH,
                 AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
+        animations.put(AnimationConstants.ANIM_WALK_ATTACK,
+            loadDirectional(assetManager, AnimationConstants.WALK_ATTACK_SHEET_PATH,
+                AnimationConstants.ATTACK_FRAME_DURATION, Animation.PlayMode.NORMAL));
 
-        // CORRIGIDO: Usando as variáveis que contêm o caminho completo correto
         animations.put("hurt",
             loadDirectional(assetManager, AnimationConstants.HURT_SHEET_PATH,
                 0.08f, Animation.PlayMode.NORMAL));

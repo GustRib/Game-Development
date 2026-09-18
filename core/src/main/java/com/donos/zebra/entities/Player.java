@@ -47,6 +47,13 @@ public class Player implements Entity {
     private float offsetY = 0f;
 
     private boolean isAttacking = false;
+    private boolean skillCastAttack = false;
+    private boolean walkAttack = false;
+    private boolean attackBuffered = false;
+    private boolean meleeImpactConsumed = false;
+    private float attackElapsed = 0f;
+    private float attackDuration = 0f;
+    private float attackImpactAt = 0f;
     private boolean unarmedAttackFeedbackPending = false;
     private Direction lastDirection = Direction.DOWN;
 
@@ -149,18 +156,18 @@ public class Player implements Entity {
         boolean moving = false;
         Direction currentDirection = lastDirection;
 
-        //Adicionada a trava !isInteracting para impedir andar/atacar com o menu de loot aberto
-        if (!isInteracting && !isAttacking && hurtTimer <= 0) {
+        // Movement continues during attacks/skills; only interaction / hurt lock locomotion.
+        if (!isInteracting && hurtTimer <= 0) {
             Vector2 velocity = input.getIntendedVelocity(delta);
             move(velocity.x, velocity.y, collisionPolygons);
             moving = input.isMoving();
             currentDirection = input.getIntendedDirection();
 
             if (input.isAttacking()) {
-                if (hasWeaponEquipped()) {
-                    isAttacking = true;
-                    stateTime = 0f;
-                    setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
+                if (isAttacking) {
+                    attackBuffered = true;
+                } else if (hasWeaponEquipped()) {
+                    beginMeleeAttack(moving);
                 } else {
                     unarmedAttackFeedbackPending = true;
                 }
@@ -171,21 +178,97 @@ public class Player implements Entity {
             lastDirection = currentDirection;
         }
 
+        if (isAttacking) {
+            attackElapsed += delta;
+        }
+
         updateAnimationState(moving);
         updateAnimation(delta);
+    }
+
+    private void beginMeleeAttack(boolean moving) {
+        isAttacking = true;
+        skillCastAttack = false;
+        walkAttack = moving;
+        attackBuffered = false;
+        meleeImpactConsumed = false;
+        attackElapsed = 0f;
+        attackDuration = walkAttack
+            ? MeleeAttackTiming.walkDurationSeconds()
+            : MeleeAttackTiming.standingDurationSeconds();
+        attackImpactAt = walkAttack
+            ? MeleeAttackTiming.walkImpactDelaySeconds()
+            : MeleeAttackTiming.standingImpactDelaySeconds();
+        stateTime = 0f;
+        setCurrentAnimation(walkAttack
+            ? AnimationConstants.ANIM_WALK_ATTACK
+            : AnimationConstants.ANIM_ATTACK);
+    }
+
+    private void finishAttack() {
+        isAttacking = false;
+        skillCastAttack = false;
+        walkAttack = false;
+        meleeImpactConsumed = false;
+        attackElapsed = 0f;
+        attackDuration = 0f;
+        attackImpactAt = 0f;
+        stateTime = 0f;
+    }
+
+    /**
+     * True once when this melee swing reaches its impact frame (not for skill casts).
+     * CombatController must call this to apply damage — clicks never deal damage directly.
+     */
+    public boolean consumeMeleeImpact() {
+        if (!isAttacking || skillCastAttack || meleeImpactConsumed) {
+            return false;
+        }
+        if (attackElapsed < attackImpactAt) {
+            return false;
+        }
+        meleeImpactConsumed = true;
+        return true;
+    }
+
+    public boolean isAttacking() {
+        return isAttacking;
+    }
+
+    public boolean isWalkAttack() {
+        return isAttacking && walkAttack;
+    }
+
+    public boolean isSkillCastAttack() {
+        return isAttacking && skillCastAttack;
     }
 
     private void updateAnimationState(boolean moving) {
         if (hurtTimer > 0) {
             setCurrentAnimation("hurt");
-        } else if (isAttacking) {
-            setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
-            if (currentAnimation[lastDirection.ordinal()].isAnimationFinished(stateTime)) {
-                isAttacking = false;
-                stateTime = 0f;
-                setCurrentAnimation(AnimationConstants.ANIM_IDLE);
+            return;
+        }
+
+        if (isAttacking) {
+            setCurrentAnimation(walkAttack
+                ? AnimationConstants.ANIM_WALK_ATTACK
+                : AnimationConstants.ANIM_ATTACK);
+
+            if (attackElapsed >= attackDuration) {
+                boolean buffered = attackBuffered;
+                finishAttack();
+                if (buffered && !isInteracting && hasWeaponEquipped()) {
+                    beginMeleeAttack(moving);
+                } else {
+                    setCurrentAnimation(moving
+                        ? AnimationConstants.ANIM_RUN
+                        : AnimationConstants.ANIM_IDLE);
+                }
             }
-        } else if (moving) {
+            return;
+        }
+
+        if (moving) {
             setCurrentAnimation(AnimationConstants.ANIM_RUN);
         } else {
             setCurrentAnimation(AnimationConstants.ANIM_IDLE);
@@ -229,6 +312,11 @@ public class Player implements Entity {
         this.isDead = false;
         this.hurtTimer = 0f;
         this.isAttacking = false;
+        this.skillCastAttack = false;
+        this.walkAttack = false;
+        this.attackBuffered = false;
+        this.meleeImpactConsumed = false;
+        this.attackElapsed = 0f;
         this.isInteracting = false;
         
         setPosition(spawnX, spawnY);
@@ -241,7 +329,12 @@ public class Player implements Entity {
 
     @Override
     public void render(SpriteBatch batch) {
-        TextureRegion currentFrame = currentAnimation[lastDirection.ordinal()].getKeyFrame(stateTime, !isDead);
+        boolean looping = !isDead
+            && !isAttacking
+            && hurtTimer <= 0
+            && !"hurt".equals(currentAnimationKey)
+            && !"death".equals(currentAnimationKey);
+        TextureRegion currentFrame = currentAnimation[lastDirection.ordinal()].getKeyFrame(stateTime, looping);
 
         batch.draw(currentFrame,
             x + offsetX - (currentFrame.getRegionWidth() * scale) / 2f,
@@ -305,9 +398,13 @@ public class Player implements Entity {
             currentHealth = 0;
             isDead = true;
             stateTime = 0f;
+            finishAttack();
+            attackBuffered = false;
         } else {
             hurtTimer = HURT_DURATION;
             stateTime = 0f;
+            finishAttack();
+            attackBuffered = false;
         }
     }
 
@@ -363,15 +460,27 @@ public class Player implements Entity {
     }
 
     /**
-     * Plays the shared attack animation for skill casts (does not resolve LMB melee).
+     * Plays attack animation for skill casts (does not resolve LMB melee).
+     * Uses walk-attack while moving, standing attack otherwise.
+     * Timing stays on {@link com.donos.zebra.skills.SkillAttackTiming}.
      */
     public void triggerSkillAttackAnimation() {
         if (isDead || isInteracting) {
             return;
         }
+        boolean moving = input != null && input.isMoving();
         isAttacking = true;
+        skillCastAttack = true;
+        walkAttack = moving;
+        attackBuffered = false;
+        meleeImpactConsumed = true;
+        attackElapsed = 0f;
+        attackDuration = com.donos.zebra.skills.SkillAttackTiming.attackDurationSeconds();
+        attackImpactAt = Float.MAX_VALUE;
         stateTime = 0f;
-        setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
+        setCurrentAnimation(walkAttack
+            ? AnimationConstants.ANIM_WALK_ATTACK
+            : AnimationConstants.ANIM_ATTACK);
     }
 
     public void setPotionCooldownRemaining(float seconds) {

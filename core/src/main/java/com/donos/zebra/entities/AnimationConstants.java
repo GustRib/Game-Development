@@ -6,13 +6,18 @@ public final class AnimationConstants {
     public static final String ANIM_WALK = "walk";
     public static final String ANIM_RUN = "run";
     public static final String ANIM_ATTACK = "attack";
+    public static final String ANIM_WALK_ATTACK = "walk_attack";
 
     public static final String IDLE_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Idle_with_shadow.png";
     public static final String WALK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Walk_with_shadow.png";
     public static final String RUN_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Run_with_shadow.png";
-    public static final String ATTACK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Run_Attack_with_shadow.png";
-    
-    // ADICIONADO: Caminhos corretos baseados na estrutura do seu projeto
+    /** Standing / skill attack (8 directional frames). */
+    public static final String ATTACK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_attack_with_shadow.png";
+    /** Moving melee attack (6 directional frames). */
+    public static final String WALK_ATTACK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Walk_Attack_with_shadow.png";
+    /** Legacy run-attack sheet (8 frames); kept for reference / optional use. */
+    public static final String RUN_ATTACK_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Run_Attack_with_shadow.png";
+
     public static final String HURT_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Hurt_with_shadow.png";
     public static final String DEATH_SHEET_PATH = "characters/Player1/Swordsman_lvl1_Death_with_shadow.png";
 

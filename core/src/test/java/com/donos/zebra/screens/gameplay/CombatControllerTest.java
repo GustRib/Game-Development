@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.entities.AnimationConstants;
 import com.donos.zebra.entities.DamageText;
 import com.donos.zebra.entities.Entity;
+import com.donos.zebra.entities.MeleeAttackTiming;
 import com.donos.zebra.entities.Orc;
 import com.donos.zebra.entities.Player;
 import com.donos.zebra.entities.StubPlayerInput;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CombatControllerTest {
 
     @Test
-    void meleeHitsEnemyInRangeDuringAttack() {
+    void meleeHitsEnemyInRangeAtImpactFrameOnly() {
         StubPlayerInput input = new StubPlayerInput();
         input.pressAttack();
         Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
@@ -36,11 +37,19 @@ class CombatControllerTest {
         List<DamageText> damageTexts = new ArrayList<>();
 
         float orcHealthBefore = orc.getCurrentHealth();
-        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
+        assertEquals(orcHealthBefore, orc.getCurrentHealth(), 0.01f);
+
+        advanceStandingMeleeToImpact(player);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
 
         assertEquals(orcHealthBefore - player.getAttackDamage(), orc.getCurrentHealth(), 0.01f);
         assertEquals(1, damageTexts.size());
         assertTrue(entities.contains(orc));
+
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
+        assertEquals(orcHealthBefore - player.getAttackDamage(), orc.getCurrentHealth(), 0.01f);
+        assertEquals(1, damageTexts.size());
     }
 
     @Test
@@ -59,7 +68,7 @@ class CombatControllerTest {
         List<DamageText> damageTexts = new ArrayList<>();
 
         float orcHealthBefore = orc.getCurrentHealth();
-        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
 
         assertEquals(orcHealthBefore, orc.getCurrentHealth(), 0.01f);
         assertEquals(1, damageTexts.size());
@@ -74,6 +83,7 @@ class CombatControllerTest {
         player.setPosition(100f, 100f);
         player.grantFirstSword();
         player.update(0.016f, new Array<>());
+        advanceStandingMeleeToImpact(player);
 
         Orc orc = new Orc(200f, 100f, TestAnimationFactory.createOrcAnimations());
         List<Entity> entities = new ArrayList<>();
@@ -81,7 +91,7 @@ class CombatControllerTest {
         List<DamageText> damageTexts = new ArrayList<>();
 
         float orcHealthBefore = orc.getCurrentHealth();
-        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
 
         assertEquals(orcHealthBefore, orc.getCurrentHealth(), 0.01f);
         assertTrue(damageTexts.isEmpty());
@@ -95,17 +105,53 @@ class CombatControllerTest {
         player.setPosition(100f, 100f);
         player.grantFirstSword();
         player.update(0.016f, new Array<>());
+        advanceStandingMeleeToImpact(player);
 
         Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
-        orc.takeDamage(35f); // leave 5 HP so one melee hit kills
+        orc.takeDamage(35f);
         List<Entity> entities = new ArrayList<>();
         entities.add(orc);
         List<DamageText> damageTexts = new ArrayList<>();
 
-        CombatController.resolvePlayerMelee(player, entities, damageTexts, true);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
 
         assertTrue(orc.isDead());
         assertTrue(entities.contains(orc));
         assertFalse(entities.isEmpty());
+    }
+
+    @Test
+    void spamClicksDoNotCreateExtraDamageEventsOnSameSwing() {
+        StubPlayerInput input = new StubPlayerInput();
+        input.pressAttack();
+        Player player = new Player(input, TestAnimationFactory.createDirectionalAnimations());
+        player.setPosition(100f, 100f);
+        player.grantFirstSword();
+        player.update(0.016f, new Array<>());
+
+        Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
+        List<Entity> entities = new ArrayList<>();
+        entities.add(orc);
+        List<DamageText> damageTexts = new ArrayList<>();
+        float before = orc.getCurrentHealth();
+
+        for (int i = 0; i < 8; i++) {
+            input.pressAttack();
+            player.update(0.02f, new Array<>());
+            CombatController.resolvePlayerMelee(player, entities, damageTexts);
+        }
+        advanceStandingMeleeToImpact(player);
+        CombatController.resolvePlayerMelee(player, entities, damageTexts);
+
+        assertEquals(before - player.getAttackDamage(), orc.getCurrentHealth(), 0.01f);
+        assertEquals(1, damageTexts.size());
+    }
+
+    static void advanceStandingMeleeToImpact(Player player) {
+        float target = MeleeAttackTiming.standingImpactDelaySeconds() + 0.002f;
+        float step = 0.02f;
+        for (float t = 0f; t < target; t += step) {
+            player.update(step, new Array<>());
+        }
     }
 }

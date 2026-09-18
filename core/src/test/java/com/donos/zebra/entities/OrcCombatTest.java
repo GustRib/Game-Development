@@ -1,14 +1,9 @@
 package com.donos.zebra.entities;
 
 import com.badlogic.gdx.utils.Array;
-import com.donos.zebra.items.ItemRegistry;
-import com.donos.zebra.items.OrcLootRolls;
 import org.junit.jupiter.api.Test;
 
-import java.util.Random;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OrcCombatTest {
@@ -29,32 +24,53 @@ class OrcCombatTest {
     }
 
     @Test
-    void orcInAttackRangeDamagesPlayer() {
+    void orcInAttackRangeDamagesPlayerOnlyAtImpactFrame() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         player.setPosition(100f, 100f);
         float healthBefore = player.getCurrentHealth();
 
         Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
         orc.updateEnemy(player, 0.016f, new Array<>());
+        assertEquals(healthBefore, player.getCurrentHealth(), 0.01f);
 
-        assertEquals(healthBefore - 15f, player.getCurrentHealth(), 0.01f);
+        orc.updateEnemy(player, OrcAttackTiming.impactDelaySeconds(), new Array<>());
+        assertEquals(healthBefore - OrcAttackTiming.DAMAGE, player.getCurrentHealth(), 0.01f);
+    }
+
+    @Test
+    void orcAttackDoesNotDamageTwiceInSameSwing() {
+        Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
+        player.setPosition(100f, 100f);
+        float healthBefore = player.getCurrentHealth();
+
+        Orc orc = new Orc(110f, 100f, TestAnimationFactory.createOrcAnimations());
+        orc.updateEnemy(player, 0.016f, new Array<>());
+        orc.updateEnemy(player, OrcAttackTiming.impactDelaySeconds(), new Array<>());
+        float afterImpact = player.getCurrentHealth();
+        orc.updateEnemy(player, 0.1f, new Array<>());
+
+        assertEquals(healthBefore - OrcAttackTiming.DAMAGE, afterImpact, 0.01f);
+        assertEquals(afterImpact, player.getCurrentHealth(), 0.01f);
     }
 
     @Test
     void orcDiesAtZeroHealthAndOffersMixedOreLoot() {
-        Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations(), new Random(42L));
+        Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations(), new java.util.Random(42L));
         orc.takeDamage(40f);
 
         assertTrue(orc.isDead());
         assertTrue(orc.hasLootAvailable());
         assertEquals(1, orc.getLootTable().size());
-        assertEquals(ItemRegistry.IRON_ORE.getId(), orc.getLootTable().get(0).getDefinition().getId());
+        assertEquals(com.donos.zebra.items.ItemRegistry.IRON_ORE.getId(),
+            orc.getLootTable().get(0).getDefinition().getId());
         int ironQty = orc.getLootTable().get(0).getQuantity();
-        assertTrue(ironQty >= OrcLootRolls.MIN_QTY && ironQty <= OrcLootRolls.MAX_QTY);
-        assertTrue(orc.getSilverLoot() >= OrcLootRolls.MIN_SILVER && orc.getSilverLoot() <= OrcLootRolls.MAX_SILVER);
+        assertTrue(ironQty >= com.donos.zebra.items.OrcLootRolls.MIN_QTY
+            && ironQty <= com.donos.zebra.items.OrcLootRolls.MAX_QTY);
+        assertTrue(orc.getSilverLoot() >= com.donos.zebra.items.OrcLootRolls.MIN_SILVER
+            && orc.getSilverLoot() <= com.donos.zebra.items.OrcLootRolls.MAX_SILVER);
 
         orc.clearLoot();
-        assertFalse(orc.hasLootAvailable());
         assertTrue(orc.isLooted());
+        assertTrue(!orc.hasLootAvailable());
     }
 }

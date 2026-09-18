@@ -3,12 +3,12 @@ package com.donos.zebra.skills;
 import com.donos.zebra.entities.AnimationConstants;
 
 /**
- * Shared timing derived from the player's attack sheet
- * ({@code Swordsman_lvl1_Run_Attack_with_shadow.png}: 8 columns × {@link AnimationConstants#ATTACK_FRAME_DURATION}).
+ * Shared timing derived from the player's standing attack sheet
+ * ({@code Swordsman_lvl1_attack_with_shadow.png}: 8 columns × {@link AnimationConstants#ATTACK_FRAME_DURATION}).
  */
 public final class SkillAttackTiming {
 
-    /** Frame columns in the wired Run_Attack sheet. */
+    /** Frame columns in the wired standing attack sheet. */
     public static final int ATTACK_FRAME_COUNT = 8;
 
     /**
