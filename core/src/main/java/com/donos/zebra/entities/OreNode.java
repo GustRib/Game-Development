@@ -7,6 +7,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Polygon;
 import com.donos.zebra.Interaction.Interactable;
 import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.quests.QuestIds;
+import com.donos.zebra.quests.QuestLog;
 import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.world.OpeningQuest;
 
@@ -32,6 +34,7 @@ public class OreNode implements Entity, Interactable {
     private boolean interactionTargeted;
     private float pulseTime;
     private BitmapFont progressFont;
+    private QuestLog questLog;
 
     public OreNode(float x, float y, Texture texture, DialogueUI dialogueUI) {
         this.x = x;
@@ -40,6 +43,10 @@ public class OreNode implements Entity, Interactable {
         this.dialogueUI = dialogueUI;
         this.hitbox = new Polygon(new float[]{0, 0, SIZE, 0, SIZE, SIZE, 0, SIZE});
         this.hitbox.setPosition(x - SIZE / 2f, y - SIZE / 2f);
+    }
+
+    public void setQuestLog(QuestLog questLog) {
+        this.questLog = questLog;
     }
 
     public void setProgressFont(BitmapFont progressFont) {
@@ -92,6 +99,9 @@ public class OreNode implements Entity, Interactable {
 
         hitsRemaining--;
         player.getInventory().addItem(ItemRegistry.COPPER_ORE, 1);
+        if (questLog != null) {
+            questLog.reportCollectItem(QuestIds.ITEM_COPPER_ORE, 1);
+        }
         if (isDepleted()) {
             depletedTimer = 0f;
         }

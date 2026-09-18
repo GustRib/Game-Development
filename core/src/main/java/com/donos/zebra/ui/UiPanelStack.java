@@ -56,4 +56,12 @@ public final class UiPanelStack {
     public void clear() {
         stack.clear();
     }
+
+    /** Closes every open panel (top-down). */
+    public void closeAll() {
+        while (closeTop()) {
+            // keep closing
+        }
+        stack.clear();
+    }
 }

@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.utils.Array;
 import com.donos.zebra.items.OrcLootRolls;
+import com.donos.zebra.quests.QuestIds;
+import com.donos.zebra.quests.QuestLog;
 
 public class Orc extends Enemy {
 
@@ -40,6 +42,7 @@ public class Orc extends Enemy {
 
     private float deathTimer;
     private float highlightPulseTime;
+    private QuestLog questLog;
 
     public Orc(float x, float y, Map<String, Animation<TextureRegion>[]> orcAnimations) {
         this(x, y, orcAnimations, SHARED_LOOT_RANDOM);
@@ -62,6 +65,10 @@ public class Orc extends Enemy {
         setHitboxLocalVertices(vertices);
 
         this.silverLoot = OrcLootRolls.fillDefaultOrcLoot(this.lootTable, this.lootRandom);
+    }
+
+    public void setQuestLog(QuestLog questLog) {
+        this.questLog = questLog;
     }
 
     public float getDeathTimer() {
@@ -242,6 +249,9 @@ public class Orc extends Enemy {
         super.takeDamage(amount);
         if (wasAlive && isDead) {
             deathTimer = 0f;
+            if (questLog != null) {
+                questLog.reportKillEnemy(QuestIds.ENEMY_ORC);
+            }
         }
         if (!isDead) {
             this.hurtTimer = HURT_DURATION;

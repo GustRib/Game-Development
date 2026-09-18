@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Polygon;
 import com.donos.zebra.Interaction.Interactable;
 import com.donos.zebra.items.ItemRegistry;
+import com.donos.zebra.quests.QuestIds;
+import com.donos.zebra.quests.QuestLog;
 import com.donos.zebra.ui.DialogueUI;
 import com.donos.zebra.world.OpeningQuest;
 
@@ -16,6 +18,7 @@ public class MentorNpc implements Entity, Interactable {
     private boolean gavePickaxe = false;
     private final DialogueUI dialogueUI;
     private Runnable openShop;
+    private QuestLog questLog;
 
     private final java.util.Map<String, Animation<TextureRegion>[]> animations;
     private float stateTime = 0f;
@@ -35,6 +38,10 @@ public class MentorNpc implements Entity, Interactable {
 
     public void setOpenShop(Runnable openShop) {
         this.openShop = openShop;
+    }
+
+    public void setQuestLog(QuestLog questLog) {
+        this.questLog = questLog;
     }
 
     public boolean hasGavePickaxe() {
@@ -105,24 +112,31 @@ public class MentorNpc implements Entity, Interactable {
     @Override
     public void onInteract(Player player) {
         if (!gavePickaxe) {
-            dialogueUI.showText(
-                "Mentor: A corrupcao ja toma a vila...\n"
-                    + "Voce nao aguenta esses monstros desarmado.\n"
-                    + "Tome esta picareta — traga "
-                    + OpeningQuest.COPPER_ORE_REQUIRED
-                    + " minerios de cobre do norte.\n"
-                    + "Eu forjo sua primeira espada."
-            );
+            if (dialogueUI != null) {
+                dialogueUI.showText(
+                    "Mentor: A corrupcao ja toma a vila...\n"
+                        + "Voce nao aguenta esses monstros desarmado.\n"
+                        + "Tome esta picareta — traga "
+                        + OpeningQuest.COPPER_ORE_REQUIRED
+                        + " minerios de cobre do norte.\n"
+                        + "Eu forjo sua primeira espada."
+                );
+            }
             player.getInventory().addItem(ItemRegistry.STONE_PICKAXE, 1);
             gavePickaxe = true;
+            if (questLog != null) {
+                questLog.reportTalkNpc(QuestIds.NPC_MENTOR);
+            }
             return;
         }
 
         if (player.hasFirstSword()) {
             if (openShop != null) {
-                dialogueUI.hideDialogue();
+                if (dialogueUI != null) {
+                    dialogueUI.hideDialogue();
+                }
                 openShop.run();
-            } else {
+            } else if (dialogueUI != null) {
                 dialogueUI.showText(
                     "Mentor: A vila precisa de voce.\n"
                         + "Nao deixe a corrupcao se espalhar!"
@@ -133,30 +147,39 @@ public class MentorNpc implements Entity, Interactable {
 
         int oreCount = player.getInventory().getItemCount(ItemRegistry.COPPER_ORE);
         if (oreCount < OpeningQuest.COPPER_ORE_REQUIRED) {
-            dialogueUI.showText(
-                "Mentor: Ainda falta cobre. A veia fica ao norte da vila.\n"
-                    + "Volte com "
-                    + OpeningQuest.COPPER_ORE_REQUIRED
-                    + " minerios e eu forjo sua lamina.\n"
-                    + "(Voce tem " + oreCount + "/"
-                    + OpeningQuest.COPPER_ORE_REQUIRED + ")"
-            );
+            if (dialogueUI != null) {
+                dialogueUI.showText(
+                    "Mentor: Ainda falta cobre. A veia fica ao norte da vila.\n"
+                        + "Volte com "
+                        + OpeningQuest.COPPER_ORE_REQUIRED
+                        + " minerios e eu forjo sua lamina.\n"
+                        + "(Voce tem " + oreCount + "/"
+                        + OpeningQuest.COPPER_ORE_REQUIRED + ")"
+                );
+            }
             return;
         }
 
         boolean removed = player.getInventory().removeItem(
             ItemRegistry.COPPER_ORE, OpeningQuest.COPPER_ORE_REQUIRED);
         if (!removed) {
-            dialogueUI.showText("Mentor: Hmm... algo deu errado com o cobre. Tente de novo.");
+            if (dialogueUI != null) {
+                dialogueUI.showText("Mentor: Hmm... algo deu errado com o cobre. Tente de novo.");
+            }
             return;
         }
 
         player.getInventory().addItem(ItemRegistry.IRON_SWORD, 1);
         player.grantFirstSword();
-        dialogueUI.showText(
-            "Mentor: Bom trabalho. Com este cobre...\n"
-                + "Eis sua primeira espada. Agora enfrente esses invasores!"
-        );
+        if (questLog != null) {
+            questLog.reportTalkNpc(QuestIds.NPC_MENTOR);
+        }
+        if (dialogueUI != null) {
+            dialogueUI.showText(
+                "Mentor: Bom trabalho. Com este cobre...\n"
+                    + "Eis sua primeira espada. Agora enfrente esses invasores!"
+            );
+        }
     }
 
     @Override

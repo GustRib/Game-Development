@@ -58,7 +58,19 @@ import com.donos.zebra.ui.SkillBarUI;
 import com.donos.zebra.ui.SkillMenuUI;
 import com.donos.zebra.ui.SkillTooltipPanel;
 import com.donos.zebra.ui.StatusToast;
+import com.donos.zebra.ui.QuestJournalUI;
+import com.donos.zebra.ui.QuestNotificationUI;
+import com.donos.zebra.ui.QuestTrackerHUD;
 import com.donos.zebra.ui.UiPanelStack;
+import com.donos.zebra.ui.WorldMapUI;
+import com.donos.zebra.quests.QuestDefinition;
+import com.donos.zebra.quests.QuestIds;
+import com.donos.zebra.quests.QuestLocation;
+import com.donos.zebra.quests.QuestLog;
+import com.donos.zebra.quests.QuestLogListener;
+import com.donos.zebra.quests.QuestMapMarker;
+import com.donos.zebra.quests.QuestMapModel;
+import com.donos.zebra.quests.QuestObjectiveDefinition;
 import com.donos.zebra.skills.SkillCastContext;
 import com.donos.zebra.skills.SkillCaster;
 import com.donos.zebra.skills.vfx.SkillEffectWorld;
@@ -141,6 +153,13 @@ public class GameScreen extends AbstractScreen {
     private final GameFlowController flow = new GameFlowController();
     private final DeathScreenController deathScreen = new DeathScreenController();
     private StatusToast statusToast;
+    private final QuestLog questLog = new QuestLog();
+    private QuestTrackerHUD questTrackerHUD;
+    private QuestJournalUI questJournalUI;
+    private QuestNotificationUI questNotificationUI;
+    private WorldMapUI worldMapUI;
+    /** True when map was opened via M without the journal (close map → leave QUESTS). */
+    private boolean worldMapStandalone;
     private final List<Interactable> interactables = new ArrayList<>();
     private Interactable activeInteractionTarget = null;
 
@@ -196,6 +215,71 @@ public class GameScreen extends AbstractScreen {
         statusToast = new StatusToast(uiSkin);
         statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
         uiStage.addActor(statusToast);
+
+        questNotificationUI = new QuestNotificationUI(uiSkin);
+        questNotificationUI.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 90f, Align.top);
+        uiStage.addActor(questNotificationUI);
+
+        questTrackerHUD = new QuestTrackerHUD(uiSkin);
+        questTrackerHUD.setPosition(Gdx.graphics.getWidth() - 16f, Gdx.graphics.getHeight() - 16f, Align.topRight);
+        questTrackerHUD.setOnClicked(this::openQuestJournalFromTracker);
+        uiStage.addActor(questTrackerHUD);
+
+        questJournalUI = new QuestJournalUI(uiSkin);
+        questJournalUI.setListener(new QuestJournalUI.Listener() {
+            @Override
+            public void onClose() {
+                closeQuestJournal();
+            }
+
+            @Override
+            public void onLocate(QuestDefinition quest, QuestObjectiveDefinition objective) {
+                openQuestMap(objective);
+            }
+        });
+        uiStage.addActor(questJournalUI);
+
+        worldMapUI = new WorldMapUI(uiSkin);
+        worldMapUI.setOnClosed(this::onWorldMapClosed);
+        uiStage.addActor(worldMapUI);
+
+        questLog.setListener(new QuestLogListener() {
+            @Override
+            public void onQuestStarted(QuestDefinition quest) {
+                questNotificationUI.show("NOVA QUEST", quest.title);
+                questTrackerHUD.refresh(questLog);
+            }
+
+            @Override
+            public void onObjectiveProgress(QuestDefinition quest,
+                                            QuestObjectiveDefinition objective,
+                                            int current,
+                                            int required) {
+                questNotificationUI.show("OBJETIVO ATUALIZADO",
+                    shortQuestLabel(objective) + ": " + current + "/" + required);
+                questTrackerHUD.refresh(questLog);
+                questJournalUI.refresh();
+            }
+
+            @Override
+            public void onObjectiveCompleted(QuestDefinition quest, QuestObjectiveDefinition objective) {
+                questNotificationUI.show("OBJETIVO CONCLUIDO", "✓ " + objective.description);
+                questTrackerHUD.refresh(questLog);
+                questJournalUI.refresh();
+            }
+
+            @Override
+            public void onQuestCompleted(QuestDefinition quest) {
+                questNotificationUI.show("QUEST CONCLUIDA", quest.title);
+                questTrackerHUD.refresh(questLog);
+                questJournalUI.refresh();
+            }
+
+            @Override
+            public void onTrackedQuestChanged(String questId) {
+                questTrackerHUD.refresh(questLog);
+            }
+        });
 
         skillTooltipPanel = new SkillTooltipPanel(uiSkin);
         skillTooltipPanel.setAssetManager(game.getAssetManager());
@@ -360,9 +444,208 @@ public class GameScreen extends AbstractScreen {
             if (skillBarUI != null) {
                 skillBarUI.refresh();
             }
+            MentorNpc mentor = findMentor(entities);
+            if (mentor == null && suspendedOverworld != null) {
+                mentor = findMentor(suspendedOverworld.entities);
+            }
+            questLog.readFromSave(save.quest, player, mentor);
+            bindQuestLogToWorldEntities();
+            questTrackerHUD.refresh(questLog);
         } else if (session.getCharacterName() != null) {
             player.setCharacterName(session.getCharacterName());
         }
+    }
+
+    private void bindQuestLogToWorldEntities() {
+        List<Entity> source = inTavern && suspendedOverworld != null
+            ? suspendedOverworld.entities
+            : entities;
+        for (Entity e : source) {
+            if (e instanceof MentorNpc) {
+                ((MentorNpc) e).setQuestLog(questLog);
+            } else if (e instanceof OreNode) {
+                ((OreNode) e).setQuestLog(questLog);
+            } else if (e instanceof com.donos.zebra.entities.Orc) {
+                ((com.donos.zebra.entities.Orc) e).setQuestLog(questLog);
+            }
+        }
+        for (Entity e : entities) {
+            if (e instanceof OreNode) {
+                ((OreNode) e).setQuestLog(questLog);
+            } else if (e instanceof MentorNpc) {
+                ((MentorNpc) e).setQuestLog(questLog);
+            } else if (e instanceof com.donos.zebra.entities.Orc) {
+                ((com.donos.zebra.entities.Orc) e).setQuestLog(questLog);
+            }
+        }
+    }
+
+    private static MentorNpc findMentor(List<Entity> list) {
+        if (list == null) {
+            return null;
+        }
+        for (Entity e : list) {
+            if (e instanceof MentorNpc) {
+                return (MentorNpc) e;
+            }
+        }
+        return null;
+    }
+
+    private static String shortQuestLabel(QuestObjectiveDefinition objective) {
+        if (objective == null) {
+            return "Objetivo";
+        }
+        if (QuestIds.ITEM_COPPER_ORE.equals(objective.targetId)) {
+            return "Cobre";
+        }
+        return objective.description;
+    }
+
+    private void openQuestJournalFromTracker() {
+        openQuestJournal(questLog.getTrackedQuestId());
+    }
+
+    private void openQuestJournal(String selectQuestId) {
+        if (player.isDead() || flow.getState() == GameFlowState.DYING || flow.getState() == GameFlowState.DEAD) {
+            return;
+        }
+        if (flow.getState() == GameFlowState.QUESTS) {
+            closeQuestJournal();
+            return;
+        }
+        if (!flow.canOpenQuests()) {
+            return;
+        }
+        if (lootWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible()) {
+            return;
+        }
+        panelStack.closeAll();
+        if (dialogueWindow.isVisible()) {
+            dialogueWindow.hideDialogue();
+        }
+        if (skillMenuUI.isVisible()) {
+            skillMenuUI.closePanel();
+        }
+        flow.openQuests();
+        questJournalUI.open(questLog, selectQuestId);
+        player.setInteracting(true);
+        syncUiInteractionLock();
+    }
+
+    private void closeQuestJournal() {
+        if (worldMapUI != null && worldMapUI.isOpen()) {
+            worldMapStandalone = false;
+            worldMapUI.close();
+        }
+        if (questJournalUI != null && questJournalUI.isVisible()) {
+            questJournalUI.setVisible(false);
+        }
+        worldMapStandalone = false;
+        flow.closeQuests();
+        syncUiInteractionLock();
+    }
+
+    private void openQuestMap(QuestObjectiveDefinition objective) {
+        if (objective == null || objective.location == null) {
+            return;
+        }
+        TiledMap overworld = resolveOverworldMap();
+        if (overworld == null) {
+            return;
+        }
+        worldMapStandalone = false;
+        List<QuestMapMarker> markers = buildWorldMapMarkers(objective.location);
+        worldMapUI.openQuestFocus(overworld, markers, objective.location);
+    }
+
+    private void toggleWorldMap() {
+        if (worldMapUI != null && worldMapUI.isOpen()) {
+            closeWorldMapOnly();
+            return;
+        }
+        if (player.isDead() || flow.getState() == GameFlowState.DYING || flow.getState() == GameFlowState.DEAD) {
+            return;
+        }
+        if (flow.getState() == GameFlowState.QUESTS) {
+            // Journal open: M opens full map over journal
+            openFullWorldMap(false);
+            return;
+        }
+        if (!flow.isPlaying()) {
+            return;
+        }
+        if (lootWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible()) {
+            return;
+        }
+        panelStack.closeAll();
+        if (dialogueWindow.isVisible()) {
+            dialogueWindow.hideDialogue();
+        }
+        if (skillMenuUI.isVisible()) {
+            skillMenuUI.closePanel();
+        }
+        openFullWorldMap(true);
+    }
+
+    private void openFullWorldMap(boolean standalone) {
+        TiledMap overworld = resolveOverworldMap();
+        if (overworld == null) {
+            return;
+        }
+        if (standalone) {
+            flow.openQuests();
+            worldMapStandalone = true;
+            if (questJournalUI != null) {
+                questJournalUI.setVisible(false);
+            }
+        } else {
+            worldMapStandalone = false;
+        }
+        worldMapUI.openFull(overworld, buildWorldMapMarkers(null));
+        player.setInteracting(true);
+        syncUiInteractionLock();
+    }
+
+    private void closeWorldMapOnly() {
+        if (worldMapUI == null || !worldMapUI.isOpen()) {
+            return;
+        }
+        boolean leaveQuests = worldMapStandalone;
+        worldMapUI.close();
+        if (leaveQuests) {
+            worldMapStandalone = false;
+            flow.closeQuests();
+            syncUiInteractionLock();
+        }
+    }
+
+    private void onWorldMapClosed() {
+        if (worldMapStandalone) {
+            worldMapStandalone = false;
+            if (flow.getState() == GameFlowState.QUESTS
+                && (questJournalUI == null || !questJournalUI.isVisible())) {
+                flow.closeQuests();
+                syncUiInteractionLock();
+            }
+        }
+    }
+
+    private TiledMap resolveOverworldMap() {
+        if (inTavern && suspendedOverworld != null && suspendedOverworld.map != null) {
+            return suspendedOverworld.map;
+        }
+        if (!inTavern && map != null) {
+            return map;
+        }
+        return map;
+    }
+
+    private List<QuestMapMarker> buildWorldMapMarkers(QuestLocation focus) {
+        List<Entity> source = entitiesForQuestWorld();
+        float px = inTavern ? outdoorReturnX : player.getX();
+        float py = inTavern ? outdoorReturnY : player.getY();
+        return QuestMapModel.worldMarkers(player, px, py, source, focus);
     }
 
     /** First load only — populates exterior from LevelLoader/Populator. */
@@ -395,12 +678,20 @@ public class GameScreen extends AbstractScreen {
                 shopWindow.open(player);
                 player.setInteracting(true);
             });
+            mentor.setQuestLog(questLog);
         }
         LevelPopulator.addOreNodes(levelData, dialogueWindow, game.getAssetManager(), interactables, entities);
+        bindQuestLogToWorldEntities();
+        if (!session.shouldApplySave()) {
+            questLog.startQuest(QuestIds.QUEST_FIRST_SWORD);
+            questLog.syncFromWorld(player, mentor);
+        }
+        questTrackerHUD.refresh(questLog);
         wireOreNodeFonts();
         LevelPopulator.addDoorHouse(levelData, interactables, entities, p -> enterTavern());
         LevelPopulator.addOrcs(
             proceduralMap, dungeonMap, initialSpawnX, initialSpawnY, game.getAssetManager(), entities);
+        bindQuestLogToWorldEntities();
     }
 
     private void wireOreNodeFonts() {
@@ -535,11 +826,21 @@ public class GameScreen extends AbstractScreen {
             statusToast.show("Forja concluida: "
                 + craftingController.getActiveJob().getRecipe().getResult().getName());
             statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
+            if (questLog != null && craftingController.getActiveJob() != null) {
+                questLog.reportCraftItem(craftingController.getActiveJob().getRecipe().getResult().getId());
+            }
         }
         if (craftingWindow.isVisible()) {
             craftingWindow.refreshProgressUi();
         }
         statusToast.update(uiDelta);
+        if (questNotificationUI != null) {
+            questNotificationUI.update(uiDelta);
+        }
+        if (questTrackerHUD != null) {
+            questTrackerHUD.setPosition(
+                Gdx.graphics.getWidth() - 16f, Gdx.graphics.getHeight() - 16f, Align.topRight);
+        }
 
         player.update(playerDelta, collisionPolygons);
 
@@ -711,7 +1012,8 @@ public class GameScreen extends AbstractScreen {
                 inTavern,
                 outdoorReturnX,
                 outdoorReturnY,
-                craftingController
+                craftingController,
+                questLog
             );
             boolean ok = saveService.writeSlot(slotIndex, data);
             if (ok) {
@@ -740,6 +1042,13 @@ public class GameScreen extends AbstractScreen {
             }
         }
         return list;
+    }
+
+    private List<Entity> entitiesForQuestWorld() {
+        if (inTavern && suspendedOverworld != null) {
+            return suspendedOverworld.entities;
+        }
+        return entities;
     }
 
     private void restartGameplay() {
@@ -843,7 +1152,10 @@ public class GameScreen extends AbstractScreen {
             || craftingWindow.isVisible()
             || shopWindow.isVisible()
             || dialogueWindow.isVisible()
-            || (skillMenuUI != null && skillMenuUI.isVisible())) {
+            || (skillMenuUI != null && skillMenuUI.isVisible())
+            || flow.getState() == GameFlowState.QUESTS
+            || (questJournalUI != null && questJournalUI.isVisible())
+            || (worldMapUI != null && worldMapUI.isOpen())) {
             player.setInteracting(true);
         } else {
             player.setInteracting(false);
@@ -858,6 +1170,14 @@ public class GameScreen extends AbstractScreen {
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (flow.getState() == GameFlowState.QUESTS) {
+                if (worldMapUI != null && worldMapUI.isOpen()) {
+                    closeWorldMapOnly();
+                    return;
+                }
+                closeQuestJournal();
+                return;
+            }
             if (flow.getState() == GameFlowState.OPTIONS) {
                 pauseMenu.openPause();
                 flow.backFromOptions();
@@ -891,6 +1211,13 @@ public class GameScreen extends AbstractScreen {
             return;
         }
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            if (flow.getState() == GameFlowState.QUESTS || flow.isPlaying()) {
+                toggleWorldMap();
+                return;
+            }
+        }
+
         if (flow.isOverlayPause()) {
             return;
         }
@@ -915,6 +1242,11 @@ public class GameScreen extends AbstractScreen {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.E)) {
                 shopWindow.closePanel();
             }
+            return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+            openQuestJournal(questLog.getTrackedQuestId());
             return;
         }
 
@@ -1203,6 +1535,7 @@ public class GameScreen extends AbstractScreen {
         }
         if (mapRenderer != null) mapRenderer.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
+        if (worldMapUI != null) worldMapUI.dispose();
     }
 
     private LevelData loadOverworldLevelData() {

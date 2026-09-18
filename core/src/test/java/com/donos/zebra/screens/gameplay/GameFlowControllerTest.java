@@ -31,6 +31,17 @@ class GameFlowControllerTest {
     }
 
     @Test
+    void questsOverlayFreezesWorldAndClosesWithEsc() {
+        GameFlowController flow = new GameFlowController();
+        flow.openQuests();
+        assertEquals(GameFlowState.QUESTS, flow.getState());
+        assertTrue(flow.isWorldFrozen());
+        assertTrue(flow.isOverlayPause());
+        assertTrue(flow.handlePauseEsc());
+        assertEquals(GameFlowState.PLAYING, flow.getState());
+    }
+
+    @Test
     void deathBlocksPauseAndFreezesWorld() {
         GameFlowController flow = new GameFlowController();
         flow.onPlayerDied();

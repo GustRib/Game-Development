@@ -12,6 +12,7 @@ import com.donos.zebra.items.Inventory;
 import com.donos.zebra.items.ItemDefinition;
 import com.donos.zebra.items.ItemRegistry;
 import com.donos.zebra.items.ItemStack;
+import com.donos.zebra.quests.QuestLog;
 
 import java.util.List;
 
@@ -33,6 +34,19 @@ public final class SaveStateMapper {
         float outdoorReturnY,
         CraftingController craftingController
     ) {
+        return capture(player, overworldEntities, inTavern, outdoorReturnX, outdoorReturnY,
+            craftingController, null);
+    }
+
+    public static SaveData capture(
+        Player player,
+        List<Entity> overworldEntities,
+        boolean inTavern,
+        float outdoorReturnX,
+        float outdoorReturnY,
+        CraftingController craftingController,
+        QuestLog questLog
+    ) {
         SaveData data = new SaveData();
         data.player = capturePlayer(player, inTavern, outdoorReturnX, outdoorReturnY);
         data.quest = new QuestSaveData();
@@ -51,6 +65,10 @@ public final class SaveStateMapper {
                     data.world.orcs.add(captureOrc((Orc) e));
                 }
             }
+        }
+
+        if (questLog != null) {
+            questLog.writeToSave(data.quest);
         }
 
         if (craftingController != null && craftingController.isBusy()

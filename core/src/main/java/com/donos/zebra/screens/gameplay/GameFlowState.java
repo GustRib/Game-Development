@@ -10,6 +10,8 @@ public enum GameFlowState {
     PAUSED,
     /** Options submenu under pause — gameplay still frozen. */
     OPTIONS,
+    /** Quest journal / contextual map — gameplay simulation frozen. */
+    QUESTS,
     /** Player HP hit zero; death animation playing; no revive UI yet. */
     DYING,
     /** Death animation done; revive/exit UI interactive. */

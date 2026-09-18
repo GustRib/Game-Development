@@ -19,9 +19,11 @@ public final class GameFlowController {
         return state == GameFlowState.PLAYING;
     }
 
-    /** Pause / options: freeze all gameplay simulation. */
+    /** Pause / options / quest journal: freeze all gameplay simulation. */
     public boolean isOverlayPause() {
-        return state == GameFlowState.PAUSED || state == GameFlowState.OPTIONS;
+        return state == GameFlowState.PAUSED
+            || state == GameFlowState.OPTIONS
+            || state == GameFlowState.QUESTS;
     }
 
     /** World entities / craft / combat (not player death anim). */
@@ -44,6 +46,10 @@ public final class GameFlowController {
         return state == GameFlowState.PLAYING;
     }
 
+    public boolean canOpenQuests() {
+        return state == GameFlowState.PLAYING;
+    }
+
     /** ESC while playing with no inventory panels → pause. */
     public void openPause() {
         if (canOpenPause()) {
@@ -53,6 +59,18 @@ public final class GameFlowController {
 
     public void resumeFromPause() {
         if (state == GameFlowState.PAUSED || state == GameFlowState.OPTIONS) {
+            state = GameFlowState.PLAYING;
+        }
+    }
+
+    public void openQuests() {
+        if (canOpenQuests()) {
+            state = GameFlowState.QUESTS;
+        }
+    }
+
+    public void closeQuests() {
+        if (state == GameFlowState.QUESTS) {
             state = GameFlowState.PLAYING;
         }
     }
@@ -70,7 +88,7 @@ public final class GameFlowController {
     }
 
     /**
-     * ESC priority for pause stack (not inventory panels).
+     * ESC priority for pause / quest stack (not inventory panels).
      * @return true if ESC was consumed
      */
     public boolean handlePauseEsc() {
@@ -80,6 +98,10 @@ public final class GameFlowController {
         }
         if (state == GameFlowState.PAUSED) {
             resumeFromPause();
+            return true;
+        }
+        if (state == GameFlowState.QUESTS) {
+            closeQuests();
             return true;
         }
         if (state == GameFlowState.PLAYING) {
@@ -92,7 +114,8 @@ public final class GameFlowController {
     public void onPlayerDied() {
         if (state == GameFlowState.PLAYING
             || state == GameFlowState.PAUSED
-            || state == GameFlowState.OPTIONS) {
+            || state == GameFlowState.OPTIONS
+            || state == GameFlowState.QUESTS) {
             state = GameFlowState.DYING;
         }
     }
