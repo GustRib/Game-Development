@@ -91,6 +91,11 @@ public final class SaveStateMapper {
         p.equippedGlovesId = idOf(player.getEquippedGloves());
         p.equippedBootsId = idOf(player.getEquippedBoots());
         p.potionSlot = toStackSave(player.getPotionSlot());
+        String[] barIds = player.getSkillBook().getBar().snapshotIds();
+        p.skillBarSlotIds = new java.util.ArrayList<>();
+        for (String id : barIds) {
+            p.skillBarSlotIds.add(id);
+        }
         return p;
     }
 
@@ -123,6 +128,10 @@ public final class SaveStateMapper {
             item(data.equippedBootsId)
         );
         player.restorePotionSlot(fromStackSave(data.potionSlot));
+        if (data.skillBarSlotIds != null && !data.skillBarSlotIds.isEmpty()) {
+            player.getSkillBook().getBar().restoreFromIds(
+                data.skillBarSlotIds.toArray(new String[0]));
+        }
         player.setPosition(data.x, data.y);
     }
 

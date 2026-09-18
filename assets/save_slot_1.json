@@ -1,27 +1,27 @@
 {
 "version": 1,
-"savedAtEpochMs": 1789744877918,
+"savedAtEpochMs": 1789754445536,
 "slotIndex": 1,
 "player": {
 	"characterName": "Sharkal",
-	"x": 256,
-	"y": 426.3005,
-	"currentHealth": 49,
+	"x": 347.0051,
+	"y": 643.175,
+	"currentHealth": 52,
 	"maxHealth": 100,
 	"hasFirstSword": true,
-	"totalSilver": 39,
+	"totalSilver": 43,
 	"inventorySlots": [
 		{
 			"itemId": "stone_pickaxe",
 			"quantity": 1
 		},
 		{
-			"itemId": "copper_ore",
-			"quantity": 4
+			"itemId": "copper_sword",
+			"quantity": 1
 		},
 		{
 			"itemId": "iron_ore",
-			"quantity": 7
+			"quantity": 11
 		},
 		null,
 		null,
@@ -41,16 +41,25 @@
 		null,
 		null
 	],
-	"equippedWeaponId": "copper_sword",
+	"equippedWeaponId": "iron_sword",
 	"equippedHelmetId": "copper_helmet",
 	"equippedChestplateId": "copper_chestplate",
-	"equippedGlovesId": null,
-	"equippedBootsId": null,
-	"potionSlot": null,
-	"potionCooldownRemaining": 0,
-	"inTavern": true,
-	"outdoorReturnX": 120.76337,
-	"outdoorReturnY": 727.95807
+	"equippedGlovesId": "copper_gloves",
+	"equippedBootsId": "copper_boots",
+	"potionSlot": {
+		"itemId": "potion_medium",
+		"quantity": 3
+	},
+	"potionCooldownRemaining": 1.0327065,
+	"inTavern": false,
+	"outdoorReturnX": 124,
+	"outdoorReturnY": 720,
+	"skillBarSlotIds": [
+		"flame_strike",
+		"whirlwind",
+		null,
+		null
+	]
 },
 "world": {
 	"worldId": "overworld",
@@ -84,32 +93,14 @@
 		{
 			"spawnX": 115.3333,
 			"spawnY": 790,
-			"x": 118.95273,
-			"y": 768.03326,
+			"x": 115.3333,
+			"y": 790,
 			"currentHealth": 40,
 			"maxHealth": 40,
 			"dead": false,
 			"deathTimer": 0,
 			"looted": false,
-			"silverLoot": 8,
-			"loot": [
-				{
-					"itemId": "iron_ore",
-					"quantity": 3
-				}
-			]
-		},
-		{
-			"spawnX": 175.3333,
-			"spawnY": 690,
-			"x": 162.92009,
-			"y": 686.7672,
-			"currentHealth": 40,
-			"maxHealth": 40,
-			"dead": false,
-			"deathTimer": 0,
-			"looted": false,
-			"silverLoot": 5,
+			"silverLoot": 7,
 			"loot": [
 				{
 					"itemId": "iron_ore",
@@ -118,27 +109,27 @@
 			]
 		},
 		{
-			"spawnX": 650,
-			"spawnY": 150,
-			"x": 718.88446,
-			"y": 216.16524,
+			"spawnX": 175.3333,
+			"spawnY": 690,
+			"x": 323.14893,
+			"y": 643.604,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 41.79502,
+			"deathTimer": 1.4744542,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
 		},
 		{
-			"spawnX": 620,
-			"spawnY": 80,
-			"x": 718.79736,
-			"y": 216.07362,
+			"spawnX": 650,
+			"spawnY": 150,
+			"x": 719.5159,
+			"y": 256.13757,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 41.79502,
+			"deathTimer": 45.57896,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -151,7 +142,20 @@
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 38.97343,
+			"deathTimer": 43.293365,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		},
+		{
+			"spawnX": 620,
+			"spawnY": 80,
+			"x": 678.7235,
+			"y": 65.986336,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 32.688667,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []

@@ -22,6 +22,8 @@ public abstract class Enemy implements Entity {
     protected int silverLoot;
     /** Nearest lootable corpse highlight (set by GameScreen each frame). */
     private boolean interactionHighlighted;
+    private final com.donos.zebra.skills.StatusEffectController statusEffects =
+        new com.donos.zebra.skills.StatusEffectController();
 
     protected float speed;
     protected float aggroRange;
@@ -167,5 +169,17 @@ public abstract class Enemy implements Entity {
 
     public float getMaxHealth() {
         return maxHealth;
+    }
+
+    public com.donos.zebra.skills.StatusEffectController getStatusEffects() {
+        return statusEffects;
+    }
+
+    public void updateStatusEffects(float delta, java.util.List<com.donos.zebra.entities.DamageText> damageTexts) {
+        if (isDead) {
+            statusEffects.clear();
+            return;
+        }
+        statusEffects.update(this, delta, damageTexts);
     }
 }

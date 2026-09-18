@@ -59,6 +59,7 @@ public class Player implements Entity {
     // --- SISTEMA DE ITENS ---
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
     private final Wallet wallet = new Wallet();
+    private final com.donos.zebra.skills.SkillBook skillBook = new com.donos.zebra.skills.SkillBook();
     private String characterName = "";
     private boolean isInteracting = false;
     private boolean hasFirstSword = false;
@@ -351,6 +352,26 @@ public class Player implements Entity {
 
     public Wallet getWallet() {
         return wallet;
+    }
+
+    public com.donos.zebra.skills.SkillBook getSkillBook() {
+        return skillBook;
+    }
+
+    public Direction getFacingDirection() {
+        return lastDirection;
+    }
+
+    /**
+     * Plays the shared attack animation for skill casts (does not resolve LMB melee).
+     */
+    public void triggerSkillAttackAnimation() {
+        if (isDead || isInteracting) {
+            return;
+        }
+        isAttacking = true;
+        stateTime = 0f;
+        setCurrentAnimation(AnimationConstants.ANIM_ATTACK);
     }
 
     public void setPotionCooldownRemaining(float seconds) {

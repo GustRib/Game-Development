@@ -26,4 +26,6 @@ public class PlayerSaveData {
     public boolean inTavern;
     public float outdoorReturnX;
     public float outdoorReturnY;
+    /** Skill bar slot IDs (length 4); null/empty entry = empty slot. */
+    public java.util.List<String> skillBarSlotIds = new java.util.ArrayList<>();
 }

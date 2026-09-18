@@ -58,11 +58,17 @@ class AssetQueueOwnershipTest {
         assertTrue(unique.contains(AnimationConstants.IDLE_SHEET_PATH));
         assertTrue(unique.contains(OrcAnimationLoader.ORC_MASTER_PATH));
         assertTrue(unique.contains(LevelConstants.MAP_PATH));
+        assertTrue(unique.contains(com.donos.zebra.skills.SkillRegistry.WHIRLWIND_ICON));
+        assertTrue(unique.contains(com.donos.zebra.skills.SkillRegistry.FLAME_STRIKE_ICON));
+        assertTrue(unique.contains(com.donos.zebra.skills.vfx.SkillVfxAssets.FLAME_SLASH_SHEET));
 
         verify(assetManager).load(eq(LevelConstants.MAP_PATH), eq(TiledMap.class));
         verify(assetManager).load(eq("items/copper_ore.png"), eq(Texture.class));
         verify(assetManager).load(eq("items/copper_sword.png"), eq(Texture.class));
         verify(assetManager).load(eq("items/iron_ore.png"), eq(Texture.class));
         verify(assetManager).load(eq(LevelConstants.TAVERN_BACKGROUND), eq(Texture.class));
+        verify(assetManager).load(eq(com.donos.zebra.skills.SkillRegistry.WHIRLWIND_ICON), eq(Texture.class));
+        verify(assetManager).load(eq(com.donos.zebra.skills.SkillRegistry.FLAME_STRIKE_ICON), eq(Texture.class));
+        verify(assetManager).load(eq(com.donos.zebra.skills.vfx.SkillVfxAssets.FLAME_SLASH_SHEET), eq(Texture.class));
     }
 }

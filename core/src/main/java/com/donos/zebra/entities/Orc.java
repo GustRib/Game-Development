@@ -168,6 +168,7 @@ public class Orc extends Enemy {
             currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
         }
         silverLoot = OrcLootRolls.fillDefaultOrcLoot(lootTable, lootRandom);
+        getStatusEffects().clear();
     }
 
     /**
@@ -252,6 +253,9 @@ public class Orc extends Enemy {
         if (isDead && isInteractionHighlighted() && hasLootAvailable()) {
             float pulse = 0.75f + 0.25f * (float) Math.sin(highlightPulseTime * 8f);
             batch.setColor(0.55f * pulse, 1f, 0.65f * pulse, 1f);
+        } else if (!isDead && getStatusEffects().hasBurning()) {
+            float pulse = 0.75f + 0.25f * (float) Math.sin(stateTime * 12f);
+            batch.setColor(1f, 0.45f * pulse, 0.2f, 1f);
         }
         batch.draw(currentFrame,
             x - currentFrame.getRegionWidth() / 2f,

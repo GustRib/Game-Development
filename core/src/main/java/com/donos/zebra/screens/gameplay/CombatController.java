@@ -109,6 +109,7 @@ public final class CombatController {
 
             if (ent instanceof Orc) {
                 ((Orc) ent).updateEnemy(player, delta, collisionPolygons);
+                ((Enemy) ent).updateStatusEffects(delta, damageTexts);
 
                 if (player.getCurrentHealth() < playerOldHealth) {
                     float damageTaken = playerOldHealth - player.getCurrentHealth();
@@ -116,6 +117,9 @@ public final class CombatController {
                         player.getX(), player.getY() + 15f, "-" + (int) damageTaken, Color.ORANGE));
                     playerOldHealth = player.getCurrentHealth();
                 }
+            } else if (ent instanceof Enemy) {
+                ((Enemy) ent).updateStatusEffects(delta, damageTexts);
+                ent.update(delta);
             } else if (!(ent instanceof Player)) {
                 ent.update(delta);
             }

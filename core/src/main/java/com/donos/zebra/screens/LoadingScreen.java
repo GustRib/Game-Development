@@ -67,6 +67,8 @@ public class LoadingScreen extends AbstractScreen {
         MentorAnimationLoader.queueAssets(assetManager);
         PlayerAnimationLoader.queueAssets(assetManager);
         OrcAnimationLoader.queueAssets(assetManager);
+        com.donos.zebra.skills.SkillRegistry.queueIconAssets(assetManager);
+        com.donos.zebra.skills.vfx.SkillVfxAssets.queue(assetManager);
 
         if (proceduralDungeon) {
             LevelLoader.queueTilesetReference(assetManager, LevelConstants.MAP_PATH);

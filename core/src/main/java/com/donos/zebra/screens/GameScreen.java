@@ -54,8 +54,15 @@ import com.donos.zebra.ui.LootUI;
 import com.donos.zebra.ui.PauseMenuUI;
 import com.donos.zebra.ui.SaveSlotsPanel;
 import com.donos.zebra.ui.ShopUI;
+import com.donos.zebra.ui.SkillBarUI;
+import com.donos.zebra.ui.SkillMenuUI;
+import com.donos.zebra.ui.SkillTooltipPanel;
 import com.donos.zebra.ui.StatusToast;
 import com.donos.zebra.ui.UiPanelStack;
+import com.donos.zebra.skills.SkillCastContext;
+import com.donos.zebra.skills.SkillCaster;
+import com.donos.zebra.skills.vfx.SkillEffectWorld;
+import com.donos.zebra.skills.vfx.SkillVfxFactory;
 import com.donos.zebra.util.HealthBarRenderer;
 import com.donos.zebra.world.CameraController;
 import com.donos.zebra.world.DungeonMapAdapter;
@@ -124,6 +131,12 @@ public class GameScreen extends AbstractScreen {
     private ShopUI shopWindow;
     private PauseMenuUI pauseMenu;
     private SaveSlotsPanel saveSlotsOverlay;
+    private SkillBarUI skillBarUI;
+    private SkillMenuUI skillMenuUI;
+    private SkillTooltipPanel skillTooltipPanel;
+    private final SkillCaster skillCaster = new SkillCaster();
+    private final SkillEffectWorld skillEffects = new SkillEffectWorld();
+    private SkillVfxFactory skillVfxFactory;
     private final CraftingController craftingController = new CraftingController();
     private final GameFlowController flow = new GameFlowController();
     private final DeathScreenController deathScreen = new DeathScreenController();
@@ -162,6 +175,8 @@ public class GameScreen extends AbstractScreen {
         if (session.getCharacterName() != null && !session.getCharacterName().isEmpty()) {
             player.setCharacterName(session.getCharacterName());
         }
+        skillVfxFactory = new SkillVfxFactory(game.getAssetManager());
+        skillVfxFactory.ensureLoaded();
 
         inventoryWindow = new InventoryUI(player.getInventory(), uiSkin, game.getAssetManager(), player);
         inventoryWindow.setPosition(24, Gdx.graphics.getHeight() / 2f + 40f, Align.topLeft);
@@ -181,6 +196,25 @@ public class GameScreen extends AbstractScreen {
         statusToast = new StatusToast(uiSkin);
         statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
         uiStage.addActor(statusToast);
+
+        skillTooltipPanel = new SkillTooltipPanel(uiSkin);
+        skillTooltipPanel.setAssetManager(game.getAssetManager());
+        uiStage.addActor(skillTooltipPanel);
+
+        skillBarUI = new SkillBarUI(player.getSkillBook(), uiSkin, game.getAssetManager());
+        skillBarUI.setTooltipPanel(skillTooltipPanel);
+        skillBarUI.placeBottomCenter(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiStage.addActor(skillBarUI);
+
+        skillMenuUI = new SkillMenuUI(player.getSkillBook(), uiSkin, game.getAssetManager());
+        skillMenuUI.setTooltipPanel(skillTooltipPanel);
+        skillMenuUI.bindSkillBar(skillBarUI);
+        skillMenuUI.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, Align.center);
+        skillMenuUI.setOnClosed(() -> {
+            panelStack.remove(skillMenuUI);
+            syncUiInteractionLock();
+        });
+        uiStage.addActor(skillMenuUI);
 
         inventoryWindow.setOnEquipmentChanged(equipmentWindow::refresh);
         equipmentWindow.setOnInventoryChanged(inventoryWindow::refresh);
@@ -322,6 +356,9 @@ public class GameScreen extends AbstractScreen {
             }
             if (inventoryWindow != null) {
                 inventoryWindow.refresh();
+            }
+            if (skillBarUI != null) {
+                skillBarUI.refresh();
             }
         } else if (session.getCharacterName() != null) {
             player.setCharacterName(session.getCharacterName());
@@ -506,6 +543,16 @@ public class GameScreen extends AbstractScreen {
 
         player.update(playerDelta, collisionPolygons);
 
+        // Skill cooldowns follow world time (frozen on pause / dying / dead)
+        if (worldDelta > 0f) {
+            player.getSkillBook().tick(worldDelta);
+            SkillCastContext skillCtx = new SkillCastContext(
+                player, entities, damageTexts, skillEffects, skillVfxFactory, cameraController);
+            skillCaster.update(worldDelta, skillCtx);
+            skillEffects.update(worldDelta);
+            cameraController.update(worldDelta);
+        }
+
         if (!inTavern) {
             if (worldDelta > 0f) {
                 CombatController.resolvePlayerMelee(player, entities, damageTexts);
@@ -564,6 +611,10 @@ public class GameScreen extends AbstractScreen {
         beginBatch();
         CombatController.renderPlayerName(batch, nameFont, player);
         endBatch();
+
+        shapeRenderer.setProjectionMatrix(cameraController.getCamera().combined);
+        batch.setProjectionMatrix(cameraController.getCamera().combined);
+        skillEffects.render(batch, shapeRenderer);
 
         if (flow.isOverlayPause()) {
             drawPauseDim();
@@ -717,6 +768,9 @@ public class GameScreen extends AbstractScreen {
         if (shopWindow.isVisible()) {
             shopWindow.closePanel();
         }
+        if (skillMenuUI != null && skillMenuUI.isVisible()) {
+            skillMenuUI.closePanel();
+        }
         if (dialogueWindow.isVisible()) {
             dialogueWindow.hideDialogue();
         }
@@ -734,6 +788,53 @@ public class GameScreen extends AbstractScreen {
         statusToast.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() - 36f, Align.top);
     }
 
+    private void toggleSkillMenu() {
+        if (skillMenuUI == null) {
+            return;
+        }
+        if (lootWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible()) {
+            return;
+        }
+        if (skillMenuUI.isVisible()) {
+            skillMenuUI.closePanel();
+            syncUiInteractionLock();
+            return;
+        }
+        if (inventoryWindow.isVisible()) {
+            inventoryWindow.closePanel();
+        }
+        if (equipmentWindow.isVisible()) {
+            equipmentWindow.closePanel();
+        }
+        skillMenuUI.open();
+        panelStack.push(skillMenuUI);
+        syncUiInteractionLock();
+    }
+
+    private void tryActivateSkillSlot(int slotIndex) {
+        if (!flow.isPlaying() || inTavern) {
+            return;
+        }
+        if (lootWindow.isVisible() || craftingWindow.isVisible() || shopWindow.isVisible()
+            || dialogueWindow.isVisible()
+            || (skillMenuUI != null && skillMenuUI.isVisible())) {
+            return;
+        }
+        SkillCastContext ctx = new SkillCastContext(
+            player, entities, damageTexts, skillEffects, skillVfxFactory, cameraController);
+        SkillCaster.CastResult result = skillCaster.tryActivateSlot(slotIndex, player.getSkillBook(), ctx);
+        if (result == SkillCaster.CastResult.NEEDS_WEAPON) {
+            damageTexts.add(new DamageText(
+                player.getX(), player.getY() + 18f, "Precisa de uma arma!",
+                com.badlogic.gdx.graphics.Color.YELLOW));
+        } else if (result == SkillCaster.CastResult.ON_COOLDOWN) {
+            showStatusToast("Habilidade em recarga");
+        }
+        if (skillBarUI != null) {
+            skillBarUI.refresh();
+        }
+    }
+
     private void syncUiInteractionLock() {
         if (flow.isOverlayPause()
             || inventoryWindow.isVisible()
@@ -741,7 +842,8 @@ public class GameScreen extends AbstractScreen {
             || lootWindow.isVisible()
             || craftingWindow.isVisible()
             || shopWindow.isVisible()
-            || dialogueWindow.isVisible()) {
+            || dialogueWindow.isVisible()
+            || (skillMenuUI != null && skillMenuUI.isVisible())) {
             player.setInteracting(true);
         } else {
             player.setInteracting(false);
@@ -814,6 +916,25 @@ public class GameScreen extends AbstractScreen {
                 shopWindow.closePanel();
             }
             return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+            toggleSkillMenu();
+            return;
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_1)) {
+            tryActivateSkillSlot(0);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_2)) {
+            tryActivateSkillSlot(1);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_3)) {
+            tryActivateSkillSlot(2);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)
+            || Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_4)) {
+            tryActivateSkillSlot(3);
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
@@ -1013,6 +1134,12 @@ public class GameScreen extends AbstractScreen {
             if (pauseMenu != null) {
                 pauseMenu.onResize(width, height);
             }
+            if (skillBarUI != null) {
+                skillBarUI.placeBottomCenter(width, height);
+            }
+            if (skillMenuUI != null && skillMenuUI.isVisible()) {
+                skillMenuUI.clampToStage(width, height);
+            }
             if (inventoryWindow != null) {
                 inventoryWindow.clampToStage(width, height);
             }
@@ -1064,6 +1191,11 @@ public class GameScreen extends AbstractScreen {
         if (damageFont != null) damageFont.dispose();
         if (uiFont != null) uiFont.dispose();
         if (nameFont != null) nameFont.dispose();
+        if (skillVfxFactory != null) {
+            skillVfxFactory.dispose();
+            skillVfxFactory = null;
+        }
+        skillEffects.clear();
         if (proceduralMap) {
             DungeonMapAdapter.disposeProceduralResources(map);
         } else if (inTavern && map != null) {
