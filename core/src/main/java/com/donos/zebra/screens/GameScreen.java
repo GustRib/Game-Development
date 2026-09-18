@@ -20,6 +20,7 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.donos.zebra.MainGame;
 import com.donos.zebra.Interaction.Interactable;
+import com.donos.zebra.audio.MusicSettings;
 import com.donos.zebra.config.DungeonGenerationConfig;
 import com.donos.zebra.config.GameConfig;
 import com.donos.zebra.entities.Enemy;
@@ -34,6 +35,9 @@ import com.donos.zebra.items.CraftingController;
 import com.donos.zebra.items.ItemStack;
 import com.donos.zebra.items.PotionRules;
 import com.donos.zebra.screens.gameplay.CombatController;
+import com.donos.zebra.screens.gameplay.DeathScreenController;
+import com.donos.zebra.screens.gameplay.GameFlowController;
+import com.donos.zebra.screens.gameplay.GameFlowState;
 import com.donos.zebra.screens.gameplay.LevelPopulator;
 import com.donos.zebra.screens.gameplay.PlayerDeathHandler;
 import com.donos.zebra.screens.gameplay.SuspendedOverworld;
@@ -43,6 +47,7 @@ import com.donos.zebra.ui.EquipmentUI;
 import com.donos.zebra.ui.InventoryUI;
 import com.donos.zebra.ui.ItemTooltipPanel;
 import com.donos.zebra.ui.LootUI;
+import com.donos.zebra.ui.PauseMenuUI;
 import com.donos.zebra.ui.ShopUI;
 import com.donos.zebra.ui.StatusToast;
 import com.donos.zebra.ui.UiPanelStack;
@@ -108,7 +113,10 @@ public class GameScreen extends AbstractScreen {
     private DialogueUI dialogueWindow;
     private CraftingUI craftingWindow;
     private ShopUI shopWindow;
+    private PauseMenuUI pauseMenu;
     private final CraftingController craftingController = new CraftingController();
+    private final GameFlowController flow = new GameFlowController();
+    private final DeathScreenController deathScreen = new DeathScreenController();
     private StatusToast statusToast;
     private final List<Interactable> interactables = new ArrayList<>();
     private Interactable activeInteractionTarget = null;
@@ -203,6 +211,35 @@ public class GameScreen extends AbstractScreen {
         shopWindow.setToast(toast);
         uiStage.addActor(shopWindow);
 
+        pauseMenu = new PauseMenuUI(uiSkin);
+        pauseMenu.setListener(new PauseMenuUI.Listener() {
+            @Override
+            public void onResume() {
+                resumeGameplay();
+            }
+
+            @Override
+            public void onRestart() {
+                restartGameplay();
+            }
+
+            @Override
+            public void onExit() {
+                Gdx.app.exit();
+            }
+
+            @Override
+            public void onOpenOptions() {
+                flow.openOptions();
+            }
+
+            @Override
+            public void onBackFromOptions() {
+                flow.backFromOptions();
+            }
+        });
+        uiStage.addActor(pauseMenu);
+
         if (game.getAssetManager().isLoaded(LevelConstants.TAVERN_BACKGROUND)) {
             tavernBackground = game.getAssetManager().get(LevelConstants.TAVERN_BACKGROUND, Texture.class);
         }
@@ -215,7 +252,7 @@ public class GameScreen extends AbstractScreen {
 
         gameplayMusic = Gdx.audio.newMusic(Gdx.files.internal("track5.wav"));
         gameplayMusic.setLooping(true);
-        gameplayMusic.setVolume(0.3f);
+        MusicSettings.bind(gameplayMusic);
         gameplayMusic.play();
     }
 
@@ -360,13 +397,26 @@ public class GameScreen extends AbstractScreen {
     public void render(float delta) {
         clearScreen(0, 0, 0, 1);
 
+        if (player.isDead()
+            && flow.getState() != GameFlowState.DYING
+            && flow.getState() != GameFlowState.DEAD) {
+            closeGameplayPanelsForOverlay();
+            pauseMenu.closeAll();
+            flow.onPlayerDied();
+            deathScreen.begin();
+        }
+
         handleItemSystemInputs();
         syncUiInteractionLock();
-        updateInteractionTargetFeedback(delta);
 
-        // Craft timer is player-owned (tavern forge) — ticks even with UI closed / in tavern.
+        float uiDelta = delta;
+        float worldDelta = flow.isWorldFrozen() ? 0f : delta;
+        float playerDelta = flow.isPlayerSimulationFrozen() ? 0f : delta;
+
+        updateInteractionTargetFeedback(worldDelta);
+
         boolean craftWasBusy = craftingController.isBusy();
-        craftingController.update(delta);
+        craftingController.update(worldDelta);
         if (craftWasBusy && craftingController.hasCompletedJob()) {
             inventoryWindow.refresh();
             equipmentWindow.refresh();
@@ -380,19 +430,23 @@ public class GameScreen extends AbstractScreen {
         if (craftingWindow.isVisible()) {
             craftingWindow.refreshProgressUi();
         }
-        statusToast.update(delta);
+        statusToast.update(uiDelta);
 
-        player.update(delta, collisionPolygons);
+        player.update(playerDelta, collisionPolygons);
 
         if (!inTavern) {
-            CombatController.resolvePlayerMelee(player, entities, damageTexts);
-            CombatController.updateDamageTexts(damageTexts, delta);
-            CombatController.updateEntities(player, entities, damageTexts, delta, collisionPolygons);
+            if (worldDelta > 0f) {
+                CombatController.resolvePlayerMelee(player, entities, damageTexts);
+            }
+            CombatController.updateDamageTexts(damageTexts, worldDelta);
+            CombatController.updateEntities(player, entities, damageTexts, worldDelta, collisionPolygons);
         } else {
-            CombatController.updateDamageTexts(damageTexts, delta);
-            for (Entity ent : entities) {
-                if (!(ent instanceof Player) && !(ent instanceof Enemy)) {
-                    ent.update(delta);
+            CombatController.updateDamageTexts(damageTexts, worldDelta);
+            if (worldDelta > 0f) {
+                for (Entity ent : entities) {
+                    if (!(ent instanceof Player) && !(ent instanceof Enemy)) {
+                        ent.update(worldDelta);
+                    }
                 }
             }
         }
@@ -428,7 +482,11 @@ public class GameScreen extends AbstractScreen {
             CombatController.renderHealthBars(shapeRenderer, entities);
         }
 
-        uiStage.act(delta);
+        if (flow.isOverlayPause()) {
+            drawPauseDim();
+        }
+
+        uiStage.act(uiDelta);
         uiStage.draw();
 
         if (DEBUG_COLLISION) {
@@ -436,7 +494,8 @@ public class GameScreen extends AbstractScreen {
         }
 
         if (player.isDead()) {
-            boolean revived = PlayerDeathHandler.drawAndHandle(
+            PlayerDeathHandler.Result deathResult = PlayerDeathHandler.updateDrawAndHandle(
+                deathScreen,
                 player,
                 initialSpawnX,
                 initialSpawnY,
@@ -446,13 +505,78 @@ public class GameScreen extends AbstractScreen {
                 batch,
                 damageFont,
                 lootWindow,
-                inventoryWindow
+                inventoryWindow,
+                uiDelta
             );
-            if (revived) {
+            if (deathScreen.isInteractive()) {
+                flow.onDeathUiReady();
+            }
+            if (deathResult == PlayerDeathHandler.Result.REVIVED) {
                 activeLootTarget = null;
                 panelStack.clear();
+                flow.onRevived();
+            } else if (deathResult == PlayerDeathHandler.Result.EXIT) {
+                Gdx.app.exit();
             }
         }
+    }
+
+    private void drawPauseDim() {
+        OrthographicCamera camera = cameraController.getCamera();
+        Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0f, 0f, 0.45f);
+        shapeRenderer.rect(
+            camera.position.x - camera.viewportWidth / 2f,
+            camera.position.y - camera.viewportHeight / 2f,
+            camera.viewportWidth,
+            camera.viewportHeight);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+    }
+
+    private void resumeGameplay() {
+        pauseMenu.closeAll();
+        flow.resumeFromPause();
+        syncUiInteractionLock();
+    }
+
+    private void restartGameplay() {
+        MusicSettings.unbind(gameplayMusic);
+        game.setScreen(new GameScreen(game));
+    }
+
+    private void openPauseMenu() {
+        closeGameplayPanelsForOverlay();
+        flow.openPause();
+        pauseMenu.openPause();
+        player.setInteracting(true);
+    }
+
+    private void closeGameplayPanelsForOverlay() {
+        if (inventoryWindow.isVisible()) {
+            inventoryWindow.closePanel();
+        }
+        if (equipmentWindow.isVisible()) {
+            equipmentWindow.closePanel();
+        }
+        if (craftingWindow.isVisible()) {
+            craftingWindow.close();
+        }
+        if (shopWindow.isVisible()) {
+            shopWindow.closePanel();
+        }
+        if (dialogueWindow.isVisible()) {
+            dialogueWindow.hideDialogue();
+        }
+        if (lootWindow.isVisible()) {
+            lootWindow.setVisible(false);
+            activeLootTarget = null;
+        }
+        inventoryWindow.hideContextMenu();
+        panelStack.clear();
+        activeInteractionTarget = null;
     }
 
     private void showStatusToast(String msg) {
@@ -461,7 +585,8 @@ public class GameScreen extends AbstractScreen {
     }
 
     private void syncUiInteractionLock() {
-        if (inventoryWindow.isVisible()
+        if (flow.isOverlayPause()
+            || inventoryWindow.isVisible()
             || equipmentWindow.isVisible()
             || lootWindow.isVisible()
             || craftingWindow.isVisible()
@@ -474,14 +599,43 @@ public class GameScreen extends AbstractScreen {
     }
 
     private void handleItemSystemInputs() {
-        if (player.isDead()) return;
+        if (player.isDead()
+            || flow.getState() == GameFlowState.DYING
+            || flow.getState() == GameFlowState.DEAD) {
+            return;
+        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (flow.getState() == GameFlowState.OPTIONS) {
+                pauseMenu.openPause();
+                flow.backFromOptions();
+                return;
+            }
+            if (flow.getState() == GameFlowState.PAUSED) {
+                resumeGameplay();
+                return;
+            }
             if (panelStack.closeTop()) {
                 syncUiInteractionLock();
                 return;
             }
-            // No open windows — leave ESC alone (death screen handles exit).
+            if (dialogueWindow.isVisible()) {
+                dialogueWindow.hideDialogue();
+                syncUiInteractionLock();
+                return;
+            }
+            if (lootWindow.isVisible()) {
+                lootWindow.setVisible(false);
+                activeLootTarget = null;
+                syncUiInteractionLock();
+                return;
+            }
+            openPauseMenu();
+            return;
+        }
+
+        if (flow.isOverlayPause()) {
+            return;
         }
 
         if (dialogueWindow.isVisible()) {
@@ -507,7 +661,6 @@ public class GameScreen extends AbstractScreen {
             return;
         }
 
-        // Quick-use potion (H) — works with I/P closed or open.
         if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
             handlePotionHotkey();
         }
@@ -702,6 +855,9 @@ public class GameScreen extends AbstractScreen {
         }
         if (uiStage != null) {
             uiStage.getViewport().update(width, height, true);
+            if (pauseMenu != null) {
+                pauseMenu.onResize(width, height);
+            }
             if (inventoryWindow != null) {
                 inventoryWindow.clampToStage(width, height);
             }
@@ -732,7 +888,9 @@ public class GameScreen extends AbstractScreen {
     @Override
     public void dispose() {
         if (gameplayMusic != null) {
+            MusicSettings.unbind(gameplayMusic);
             gameplayMusic.dispose();
+            gameplayMusic = null;
         }
         super.dispose();
 

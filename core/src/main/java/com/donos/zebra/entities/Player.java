@@ -274,6 +274,21 @@ public class Player implements Entity {
         return currentAnimationKey;
     }
 
+    /**
+     * True when the death animation has reached its final frame (non-looping).
+     */
+    public boolean isDeathAnimationFinished() {
+        if (!isDead || currentAnimation == null) {
+            return false;
+        }
+        int dirIndex = lastDirection.ordinal();
+        if (dirIndex >= currentAnimation.length) {
+            dirIndex = 0;
+        }
+        Animation<TextureRegion> anim = currentAnimation[dirIndex];
+        return anim != null && anim.isAnimationFinished(stateTime);
+    }
+
     public void setOffsets(float offsetX, float offsetY) {
         this.offsetX = offsetX;
         this.offsetY = offsetY;

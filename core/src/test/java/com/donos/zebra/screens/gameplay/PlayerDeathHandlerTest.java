@@ -36,4 +36,15 @@ class PlayerDeathHandlerTest {
         verify(lootUI).setVisible(false);
         verify(inventoryUI).setVisible(false);
     }
+
+    @Test
+    void deathAnimationFinishedRequiresEnoughStateTime() {
+        Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
+        player.takeDamage(999f);
+        assertFalse(player.isDeathAnimationFinished());
+        player.update(0.05f, new Array<>());
+        assertFalse(player.isDeathAnimationFinished());
+        player.update(0.1f, new Array<>());
+        assertTrue(player.isDeathAnimationFinished());
+    }
 }

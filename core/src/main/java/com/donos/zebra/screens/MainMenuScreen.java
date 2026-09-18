@@ -53,9 +53,9 @@ public class MainMenuScreen extends AbstractScreen {
 
         // --- INICIALIZAÇÃO DA MÚSICA DE FUNDO ---
         menuMusic = Gdx.audio.newMusic(Gdx.files.internal("Track3.mp3"));
-        menuMusic.setLooping(true); // Toca continuamente
-        menuMusic.setVolume(0.4f);  // Define o volume (40%)
-        menuMusic.play();           // Inicia a música
+        menuMusic.setLooping(true);
+        com.donos.zebra.audio.MusicSettings.bind(menuMusic);
+        menuMusic.play();
 
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Fonts/DungeonFont.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
@@ -127,6 +127,7 @@ public class MainMenuScreen extends AbstractScreen {
     public void dispose() {
         // Libera a música da memória para evitar memory leaks
         if (menuMusic != null) {
+            com.donos.zebra.audio.MusicSettings.unbind(menuMusic);
             menuMusic.dispose();
         }
         if (backgroundTexture != null) backgroundTexture.dispose();
