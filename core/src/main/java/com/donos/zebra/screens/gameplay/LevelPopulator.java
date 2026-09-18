@@ -18,6 +18,7 @@ import com.donos.zebra.entities.OreNode;
 import com.donos.zebra.items.ItemRegistry;
 import com.donos.zebra.ui.CraftingUI;
 import com.donos.zebra.ui.DialogueUI;
+import com.donos.zebra.util.CollisionMovement;
 import com.donos.zebra.world.LevelData;
 import com.donos.zebra.world.dungeon.DungeonMap;
 import com.donos.zebra.world.dungeon.Room;
@@ -65,14 +66,43 @@ public final class LevelPopulator {
                 }
             }
         } else {
-            // Village map: two near spawn + three in the southeast for farming loops.
-            spawns.add(new Vector2(playerSpawnX + 60f, playerSpawnY + 60f));
-            spawns.add(new Vector2(playerSpawnX + 120f, playerSpawnY - 40f));
+        // Village map: southeast farming cluster only (no near-player-spawn orcs).
+            // Six points roughly double the former three-orc SE cluster, spaced apart.
             spawns.add(new Vector2(650f, 150f));
             spawns.add(new Vector2(700f, 200f));
-            spawns.add(new Vector2(620f, 80f));
+            spawns.add(new Vector2(600f, 150f));
+            spawns.add(new Vector2(680f, 110f));
+            spawns.add(new Vector2(730f, 170f));
+            spawns.add(new Vector2(640f, 210f));
         }
         return spawns;
+    }
+
+    /**
+     * Village orc hitbox used for spawn clearance checks (matches {@link Orc} ctor).
+     */
+    public static final float[] VILLAGE_ORC_HITBOX = { -5f, -6f, 5f, -6f, 5f, 6f, -5f, 6f };
+
+    /**
+     * Filters candidate spawns that would overlap collision polygons.
+     */
+    public static List<Vector2> filterWalkableSpawns(List<Vector2> candidates,
+                                                     Array<Polygon> collisionPolygons,
+                                                     float[] localHitbox) {
+        List<Vector2> walkable = new ArrayList<>();
+        if (candidates == null) {
+            return walkable;
+        }
+        float[] hitbox = localHitbox != null ? localHitbox : VILLAGE_ORC_HITBOX;
+        for (Vector2 spawn : candidates) {
+            if (spawn == null) {
+                continue;
+            }
+            if (!CollisionMovement.overlapsWalls(spawn.x, spawn.y, hitbox, collisionPolygons)) {
+                walkable.add(spawn);
+            }
+        }
+        return walkable;
     }
 
     public static MentorNpc addMentor(LevelData levelData,

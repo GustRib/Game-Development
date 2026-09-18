@@ -224,10 +224,10 @@
   <object id="88" name="Mentor" x="152.667" y="104.667">
    <point/>
   </object>
-  <object id="89" name="OreNode1" x="168" y="248" width="16" height="16"/>
-  <object id="90" name="OreNode2" x="200" y="272" width="16" height="16"/>
-  <object id="92" name="OreNode3" x="184" y="296" width="16" height="16"/>
-  <object id="93" name="OreNode4" x="216" y="256" width="16" height="16"/>
+  <object id="89" name="OreNode1" x="120" y="120" width="16" height="16"/>
+  <object id="90" name="OreNode2" x="172" y="80" width="16" height="16"/>
+  <object id="92" name="OreNode3" x="144" y="132" width="16" height="16"/>
+  <object id="93" name="OreNode4" x="180" y="120" width="16" height="16"/>
   <!-- Door aligned to left front door of first house (colisao id=61: 116,43.3 28x26.7).
        Tileset doors sit on the left of the facade; trigger overlaps that door tile. -->
   <object id="91" name="DoorHouse1" x="118" y="54" width="12" height="16"/>

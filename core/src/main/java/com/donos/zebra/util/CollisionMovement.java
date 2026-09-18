@@ -73,4 +73,20 @@ public final class CollisionMovement {
         }
         return false;
     }
+
+    /**
+     * Returns true if placing a hitbox at {@code (x, y)} would overlap any wall.
+     * Used for spawn validation (orcs, ore nodes) before entities enter the world.
+     */
+    public static boolean overlapsWalls(float x,
+                                        float y,
+                                        float[] localVertices,
+                                        Array<Polygon> walls) {
+        if (walls == null || walls.size == 0 || localVertices == null) {
+            return false;
+        }
+        Polygon probe = new Polygon(localVertices.clone());
+        probe.setPosition(x, y);
+        return overlapsAny(probe, walls);
+    }
 }

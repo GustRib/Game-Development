@@ -20,8 +20,6 @@ public class Orc extends Enemy {
     private static final Random SHARED_LOOT_RANDOM = new Random();
 
     private final Map<String, Animation<TextureRegion>[]> animations;
-    private final float spawnX;
-    private final float spawnY;
     private final Random lootRandom;
     private Animation<TextureRegion>[] currentAnimation;
     private float stateTime = 0f;
@@ -50,10 +48,9 @@ public class Orc extends Enemy {
 
     public Orc(float x, float y, Map<String, Animation<TextureRegion>[]> orcAnimations, Random lootRandom) {
         super(x, y, 40f, 35f, 100f);
-        this.spawnX = x;
-        this.spawnY = y;
         this.animations = orcAnimations;
         this.lootRandom = lootRandom != null ? lootRandom : SHARED_LOOT_RANDOM;
+        setWanderRandom(this.lootRandom);
 
         if (animations != null && animations.containsKey(AnimationConstants.ANIM_IDLE)) {
             this.currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
@@ -73,14 +70,6 @@ public class Orc extends Enemy {
 
     public float getDeathTimer() {
         return deathTimer;
-    }
-
-    public float getSpawnX() {
-        return spawnX;
-    }
-
-    public float getSpawnY() {
-        return spawnY;
     }
 
     public void updateEnemy(Player player, float delta) {
@@ -119,8 +108,8 @@ public class Orc extends Enemy {
         float oldX = this.x;
         float oldY = this.y;
 
-        if (!player.isDead() && !isAttacking) {
-            chasePlayer(player, delta, collisionPolygons);
+        if (!isAttacking) {
+            updateLocomotion(player, delta, collisionPolygons);
         }
 
         float dx = this.x - oldX;
@@ -187,6 +176,7 @@ public class Orc extends Enemy {
         attackImpactApplied = false;
         attackCooldownTimer = 0f;
         highlightPulseTime = 0f;
+        resetWanderState();
         setInteractionHighlighted(false);
         if (animations != null && animations.containsKey(AnimationConstants.ANIM_IDLE)) {
             currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);

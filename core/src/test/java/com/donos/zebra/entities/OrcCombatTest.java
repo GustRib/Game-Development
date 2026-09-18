@@ -9,18 +9,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OrcCombatTest {
 
     @Test
-    void orcOutsideAggroRangeDoesNotMove() {
+    void orcOutsideAggroWandersInsteadOfChasingPlayer() {
         Player player = new Player(new StubPlayerInput(), TestAnimationFactory.createDirectionalAnimations());
         player.setPosition(500f, 500f);
 
-        Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations());
-        float startX = orc.getX();
-        float startY = orc.getY();
+        Orc orc = new Orc(100f, 100f, TestAnimationFactory.createOrcAnimations(), new java.util.Random(5L));
+        float distBefore = com.badlogic.gdx.math.Vector2.dst(
+            orc.getX(), orc.getY(), player.getX(), player.getY());
 
         orc.updateEnemy(player, 0.5f, new Array<>());
 
-        assertEquals(startX, orc.getX(), 0.01f);
-        assertEquals(startY, orc.getY(), 0.01f);
+        assertTrue(orc.isWandering());
+        float distAfter = com.badlogic.gdx.math.Vector2.dst(
+            orc.getX(), orc.getY(), player.getX(), player.getY());
+        assertTrue(distAfter > orc.getAggroRange());
+        // Wander must not close nearly a full chase step toward the player.
+        float chaseStep = orc.getSpeed() * 0.5f;
+        assertTrue(distBefore - distAfter < chaseStep * 0.75f);
     }
 
     @Test

@@ -1,15 +1,15 @@
 {
 "version": 2,
-"savedAtEpochMs": 1789771709157,
+"savedAtEpochMs": 1789774721471,
 "slotIndex": 1,
 "player": {
 	"characterName": "gust",
-	"x": 674.0327,
-	"y": 105.321976,
-	"currentHealth": 82,
+	"x": 632.0702,
+	"y": 647.4458,
+	"currentHealth": 70,
 	"maxHealth": 100,
 	"hasFirstSword": true,
-	"totalSilver": 56,
+	"totalSilver": 49,
 	"inventorySlots": [
 		{
 			"itemId": "stone_pickaxe",
@@ -21,7 +21,7 @@
 		},
 		{
 			"itemId": "iron_ore",
-			"quantity": 8
+			"quantity": 9
 		},
 		null,
 		null,
@@ -51,12 +51,12 @@
 	"equippedBootsId": "copper_boots",
 	"potionSlot": {
 		"itemId": "potion_large",
-		"quantity": 34
+		"quantity": 36
 	},
-	"potionCooldownRemaining": 3.1145132,
+	"potionCooldownRemaining": 0,
 	"inTavern": false,
-	"outdoorReturnX": 128.32022,
-	"outdoorReturnY": 727.31537,
+	"outdoorReturnX": 124,
+	"outdoorReturnY": 720,
 	"skillBarSlotIds": [
 		"whirlwind",
 		"flame_strike",
@@ -75,58 +75,40 @@
 	"worldId": "overworld",
 	"oreNodes": [
 		{
-			"x": 176,
-			"y": 544,
-			"hitsRemaining": 3,
-			"depletedTimer": 0
+			"x": 180,
+			"y": 712,
+			"hitsRemaining": 0,
+			"depletedTimer": 82.6642
 		},
 		{
-			"x": 224,
-			"y": 536,
-			"hitsRemaining": 3,
-			"depletedTimer": 0
+			"x": 128,
+			"y": 672,
+			"hitsRemaining": 0,
+			"depletedTimer": 76.30411
 		},
 		{
-			"x": 208,
-			"y": 520,
-			"hitsRemaining": 3,
-			"depletedTimer": 0
+			"x": 188,
+			"y": 672,
+			"hitsRemaining": 0,
+			"depletedTimer": 84.319626
 		},
 		{
-			"x": 192,
-			"y": 496,
-			"hitsRemaining": 3,
-			"depletedTimer": 0
+			"x": 152,
+			"y": 660,
+			"hitsRemaining": 0,
+			"depletedTimer": 78.99306
 		}
 	],
 	"orcs": [
 		{
-			"spawnX": 175.3333,
-			"spawnY": 690,
-			"x": 175.3333,
-			"y": 690,
-			"currentHealth": 40,
-			"maxHealth": 40,
-			"dead": false,
-			"deathTimer": 0,
-			"looted": false,
-			"silverLoot": 7,
-			"loot": [
-				{
-					"itemId": "iron_ore",
-					"quantity": 2
-				}
-			]
-		},
-		{
-			"spawnX": 115.3333,
-			"spawnY": 790,
-			"x": 171.69638,
-			"y": 668.2571,
+			"spawnX": 640,
+			"spawnY": 210,
+			"x": 690.0287,
+			"y": 213.77924,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 59.65798,
+			"deathTimer": 23.395252,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -139,7 +121,20 @@
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 12.312659,
+			"deathTimer": 17.331112,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		},
+		{
+			"spawnX": 730,
+			"spawnY": 170,
+			"x": 715.6962,
+			"y": 195.99265,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 23.395252,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
@@ -147,25 +142,38 @@
 		{
 			"spawnX": 650,
 			"spawnY": 150,
-			"x": 679.14795,
-			"y": 199.6648,
+			"x": 717.7966,
+			"y": 181.00409,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 15.951837,
+			"deathTimer": 20.92136,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
 		},
 		{
-			"spawnX": 620,
-			"spawnY": 80,
-			"x": 689.9205,
-			"y": 67.6803,
+			"spawnX": 600,
+			"spawnY": 150,
+			"x": 669.8449,
+			"y": 167.58986,
 			"currentHealth": 0,
 			"maxHealth": 40,
 			"dead": true,
-			"deathTimer": 2.6901095,
+			"deathTimer": 12.00268,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		},
+		{
+			"spawnX": 680,
+			"spawnY": 110,
+			"x": 695.52844,
+			"y": 162.41772,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 23.395252,
 			"looted": true,
 			"silverLoot": 0,
 			"loot": []
