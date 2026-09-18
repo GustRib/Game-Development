@@ -3,6 +3,7 @@ package com.donos.zebra.screens.gameplay;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Polygon;
@@ -156,5 +157,24 @@ public final class CombatController {
         }
 
         shapeRenderer.end();
+    }
+
+    /**
+     * Draws the character name above the HP bar in world space (same layer as combat visuals).
+     */
+    public static void renderPlayerName(SpriteBatch batch, BitmapFont font, Player player) {
+        if (player == null || font == null) {
+            return;
+        }
+        String name = player.getCharacterName();
+        if (name == null || name.isEmpty()) {
+            return;
+        }
+        GlyphLayout layout = new GlyphLayout(font, name);
+        float x = player.getX() - layout.width / 2f;
+        float y = player.getY() + 16f + 10f;
+        font.setColor(1f, 0.95f, 0.75f, 1f);
+        font.draw(batch, name, x, y);
+        font.setColor(1f, 1f, 1f, 1f);
     }
 }

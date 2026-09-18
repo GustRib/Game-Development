@@ -195,4 +195,30 @@ public class Inventory {
         stack.remove(1);
         return true;
     }
+
+    /** Clears every slot (used by save/load restore). */
+    public void clearAll() {
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = null;
+        }
+    }
+
+    /**
+     * Places a stack at a fixed index (save restore). Pass null to clear.
+     * Does not merge with other stacks.
+     */
+    public void setStackAt(int index, ItemStack stack) {
+        if (index < 0 || index >= slots.length) {
+            return;
+        }
+        if (stack == null || stack.isEmpty()) {
+            slots[index] = null;
+            return;
+        }
+        slots[index] = stack;
+    }
+
+    public int getSize() {
+        return slots.length;
+    }
 }

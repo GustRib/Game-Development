@@ -1,0 +1,168 @@
+{
+"version": 1,
+"savedAtEpochMs": 1789748052545,
+"slotIndex": 3,
+"player": {
+	"characterName": "law",
+	"x": 698.0328,
+	"y": 480.95898,
+	"currentHealth": 53,
+	"maxHealth": 100,
+	"hasFirstSword": true,
+	"totalSilver": 29,
+	"inventorySlots": [
+		{
+			"itemId": "stone_pickaxe",
+			"quantity": 1
+		},
+		{
+			"itemId": "copper_ore",
+			"quantity": 2
+		},
+		{
+			"itemId": "iron_ore",
+			"quantity": 8
+		},
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null
+	],
+	"equippedWeaponId": "copper_sword",
+	"equippedHelmetId": "copper_helmet",
+	"equippedChestplateId": "copper_chestplate",
+	"equippedGlovesId": null,
+	"equippedBootsId": null,
+	"potionSlot": {
+		"itemId": "potion_small",
+		"quantity": 1
+	},
+	"potionCooldownRemaining": 0,
+	"inTavern": false,
+	"outdoorReturnX": 123.902565,
+	"outdoorReturnY": 727.17737
+},
+"world": {
+	"worldId": "overworld",
+	"oreNodes": [
+		{
+			"x": 176,
+			"y": 544,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		},
+		{
+			"x": 224,
+			"y": 536,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		},
+		{
+			"x": 208,
+			"y": 520,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		},
+		{
+			"x": 192,
+			"y": 496,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		}
+	],
+	"orcs": [
+		{
+			"spawnX": 115.3333,
+			"spawnY": 790,
+			"x": 115.3333,
+			"y": 790,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 5,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 1
+				}
+			]
+		},
+		{
+			"spawnX": 175.3333,
+			"spawnY": 690,
+			"x": 175.3333,
+			"y": 690,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 6,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 3
+				}
+			]
+		},
+		{
+			"spawnX": 700,
+			"spawnY": 200,
+			"x": 700,
+			"y": 200,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 27.247492,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		},
+		{
+			"spawnX": 650,
+			"spawnY": 150,
+			"x": 690.1057,
+			"y": 191.29402,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 24.475748,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		},
+		{
+			"spawnX": 620,
+			"spawnY": 80,
+			"x": 678.79486,
+			"y": 172.80434,
+			"currentHealth": 0,
+			"maxHealth": 40,
+			"dead": true,
+			"deathTimer": 22.655993,
+			"looted": true,
+			"silverLoot": 0,
+			"loot": []
+		}
+	]
+},
+"quest": {
+	"mentorGavePickaxe": true
+},
+"crafting": null
+}

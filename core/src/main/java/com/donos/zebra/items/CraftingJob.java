@@ -14,9 +14,20 @@ public final class CraftingJob {
     private boolean justCompleted;
 
     public CraftingJob(CraftingRecipe recipe, Inventory inventory) {
+        this(recipe, inventory, 0f);
+    }
+
+    /** Restore an in-progress job (materials already consumed when originally started). */
+    public CraftingJob(CraftingRecipe recipe, Inventory inventory, float elapsedSeconds) {
         this.recipe = recipe;
         this.inventory = inventory;
-        this.elapsed = 0f;
+        this.elapsed = Math.max(0f, elapsedSeconds);
+        if (this.elapsed >= DURATION_SECONDS) {
+            this.elapsed = DURATION_SECONDS;
+            inventory.addItem(recipe.getResult(), 1);
+            this.complete = true;
+            this.justCompleted = true;
+        }
     }
 
     public CraftingRecipe getRecipe() {

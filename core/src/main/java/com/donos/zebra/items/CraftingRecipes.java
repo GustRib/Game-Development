@@ -80,4 +80,16 @@ public final class CraftingRecipes {
     public static List<CraftingRecipe> all() {
         return ALL;
     }
+
+    public static CraftingRecipe findById(String id) {
+        if (id == null || id.isEmpty()) {
+            return null;
+        }
+        for (CraftingRecipe recipe : ALL) {
+            if (id.equals(recipe.getId())) {
+                return recipe;
+            }
+        }
+        return null;
+    }
 }

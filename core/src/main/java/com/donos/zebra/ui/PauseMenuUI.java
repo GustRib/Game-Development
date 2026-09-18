@@ -25,6 +25,8 @@ public class PauseMenuUI extends Table implements UiPanelStack.Panel {
     public interface Listener {
         void onResume();
 
+        void onSaveGame();
+
         void onRestart();
 
         void onExit();
@@ -121,6 +123,12 @@ public class PauseMenuUI extends Table implements UiPanelStack.Panel {
         panel.add(menuButton("Continuar", () -> {
             if (listener != null) {
                 listener.onResume();
+            }
+        })).width(220).height(36).padBottom(8).row();
+
+        panel.add(menuButton("Salvar Jogo", () -> {
+            if (listener != null) {
+                listener.onSaveGame();
             }
         })).width(220).height(36).padBottom(8).row();
 

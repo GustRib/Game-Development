@@ -49,4 +49,15 @@ public final class CraftingController {
             activeJob = null;
         }
     }
+
+    /** Rebuilds an in-progress craft from save data (does not re-consume materials). */
+    public void restoreJob(CraftingRecipe recipe, Inventory inventory, float elapsedSeconds) {
+        if (recipe == null || inventory == null) {
+            return;
+        }
+        activeJob = new CraftingJob(recipe, inventory, elapsedSeconds);
+        if (activeJob.isComplete()) {
+            activeJob = null;
+        }
+    }
 }

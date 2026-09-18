@@ -34,6 +34,10 @@ import com.donos.zebra.entities.OreNode;
 import com.donos.zebra.items.CraftingController;
 import com.donos.zebra.items.ItemStack;
 import com.donos.zebra.items.PotionRules;
+import com.donos.zebra.save.GameSession;
+import com.donos.zebra.save.SaveData;
+import com.donos.zebra.save.SaveService;
+import com.donos.zebra.save.SaveStateMapper;
 import com.donos.zebra.screens.gameplay.CombatController;
 import com.donos.zebra.screens.gameplay.DeathScreenController;
 import com.donos.zebra.screens.gameplay.GameFlowController;
@@ -48,9 +52,11 @@ import com.donos.zebra.ui.InventoryUI;
 import com.donos.zebra.ui.ItemTooltipPanel;
 import com.donos.zebra.ui.LootUI;
 import com.donos.zebra.ui.PauseMenuUI;
+import com.donos.zebra.ui.SaveSlotsPanel;
 import com.donos.zebra.ui.ShopUI;
 import com.donos.zebra.ui.StatusToast;
 import com.donos.zebra.ui.UiPanelStack;
+import com.donos.zebra.util.HealthBarRenderer;
 import com.donos.zebra.world.CameraController;
 import com.donos.zebra.world.DungeonMapAdapter;
 import com.donos.zebra.world.LevelConstants;
@@ -72,6 +78,8 @@ public class GameScreen extends AbstractScreen {
     private static final float INTERACTION_RANGE = 26f;
 
     private final MainGame game;
+    private GameSession session;
+    private final SaveService saveService = new SaveService();
     private Player player;
     private final List<Entity> entities = new ArrayList<>();
     private final List<DamageText> damageTexts = new ArrayList<>();
@@ -84,6 +92,7 @@ public class GameScreen extends AbstractScreen {
     private DungeonMap dungeonMap;
     private BitmapFont damageFont;
     private BitmapFont uiFont;
+    private BitmapFont nameFont;
     private TiledMap map;
     private boolean proceduralMap;
     private boolean inTavern;
@@ -114,6 +123,7 @@ public class GameScreen extends AbstractScreen {
     private CraftingUI craftingWindow;
     private ShopUI shopWindow;
     private PauseMenuUI pauseMenu;
+    private SaveSlotsPanel saveSlotsOverlay;
     private final CraftingController craftingController = new CraftingController();
     private final GameFlowController flow = new GameFlowController();
     private final DeathScreenController deathScreen = new DeathScreenController();
@@ -122,8 +132,13 @@ public class GameScreen extends AbstractScreen {
     private Interactable activeInteractionTarget = null;
 
     public GameScreen(MainGame game) {
+        this(game, GameSession.newGame("Hero"));
+    }
+
+    public GameScreen(MainGame game, GameSession session) {
         super(game.batch);
         this.game = game;
+        this.session = session != null ? session : GameSession.newGame("Hero");
     }
 
     @Override
@@ -136,12 +151,17 @@ public class GameScreen extends AbstractScreen {
         damageFont.getData().setScale(0.85f);
         uiFont = new BitmapFont();
         uiFont.getData().setScale(1.4f);
+        nameFont = new BitmapFont();
+        nameFont.getData().setScale(0.55f);
         shapeRenderer = new ShapeRenderer();
 
         uiStage = new Stage(new ScreenViewport());
         uiSkin = InventoryUI.createDefaultSkin(uiFont);
 
         player = new Player(game.getAssetManager());
+        if (session.getCharacterName() != null && !session.getCharacterName().isEmpty()) {
+            player.setCharacterName(session.getCharacterName());
+        }
 
         inventoryWindow = new InventoryUI(player.getInventory(), uiSkin, game.getAssetManager(), player);
         inventoryWindow.setPosition(24, Gdx.graphics.getHeight() / 2f + 40f, Align.topLeft);
@@ -215,7 +235,13 @@ public class GameScreen extends AbstractScreen {
         pauseMenu.setListener(new PauseMenuUI.Listener() {
             @Override
             public void onResume() {
+                hideSaveOverlay();
                 resumeGameplay();
+            }
+
+            @Override
+            public void onSaveGame() {
+                openSaveOverlay();
             }
 
             @Override
@@ -230,6 +256,7 @@ public class GameScreen extends AbstractScreen {
 
             @Override
             public void onOpenOptions() {
+                hideSaveOverlay();
                 flow.openOptions();
             }
 
@@ -240,6 +267,23 @@ public class GameScreen extends AbstractScreen {
         });
         uiStage.addActor(pauseMenu);
 
+        saveSlotsOverlay = new SaveSlotsPanel(uiSkin, SaveSlotsPanel.Mode.SAVE, saveService);
+        saveSlotsOverlay.setVisible(false);
+        saveSlotsOverlay.setFillParent(true);
+        saveSlotsOverlay.setListener(new SaveSlotsPanel.Listener() {
+            @Override
+            public void onSlotChosen(int slotIndex) {
+                performSave(slotIndex);
+            }
+
+            @Override
+            public void onBack() {
+                hideSaveOverlay();
+                pauseMenu.openPause();
+            }
+        });
+        uiStage.addActor(saveSlotsOverlay);
+
         if (game.getAssetManager().isLoaded(LevelConstants.TAVERN_BACKGROUND)) {
             tavernBackground = game.getAssetManager().get(LevelConstants.TAVERN_BACKGROUND, Texture.class);
         }
@@ -249,11 +293,39 @@ public class GameScreen extends AbstractScreen {
         cameraController = new CameraController(camera);
 
         bootstrapOverworld();
+        applySessionAfterBootstrap();
 
         gameplayMusic = Gdx.audio.newMusic(Gdx.files.internal("track5.wav"));
         gameplayMusic.setLooping(true);
         MusicSettings.bind(gameplayMusic);
         gameplayMusic.play();
+    }
+
+    private void applySessionAfterBootstrap() {
+        if (session.shouldApplySave()) {
+            SaveData save = session.getLoadedSave();
+            List<Entity> overworldEntities = new ArrayList<>(entities);
+            SaveStateMapper.applyWorld(save.world, save.quest, overworldEntities);
+            SaveStateMapper.applyPlayer(save.player, player);
+            SaveStateMapper.applyCrafting(save.crafting, craftingController, player.getInventory());
+            if (save.player != null && save.player.inTavern) {
+                outdoorReturnX = save.player.outdoorReturnX;
+                outdoorReturnY = save.player.outdoorReturnY;
+                float tavernX = save.player.x;
+                float tavernY = save.player.y;
+                player.setPosition(outdoorReturnX, outdoorReturnY);
+                enterTavern();
+                player.setPosition(tavernX, tavernY);
+            }
+            if (equipmentWindow != null) {
+                equipmentWindow.refresh();
+            }
+            if (inventoryWindow != null) {
+                inventoryWindow.refresh();
+            }
+        } else if (session.getCharacterName() != null) {
+            player.setCharacterName(session.getCharacterName());
+        }
     }
 
     /** First load only — populates exterior from LevelLoader/Populator. */
@@ -480,7 +552,18 @@ public class GameScreen extends AbstractScreen {
 
         if (!inTavern) {
             CombatController.renderHealthBars(shapeRenderer, entities);
+        } else {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            HealthBarRenderer.draw(
+                shapeRenderer, player.getX(), player.getY() + 16f, 20f, 4f,
+                player.getCurrentHealth(), player.getMaxHealth());
+            shapeRenderer.end();
         }
+
+        // Name above HP bar (world space, after bar so it stays readable)
+        beginBatch();
+        CombatController.renderPlayerName(batch, nameFont, player);
+        endBatch();
 
         if (flow.isOverlayPause()) {
             drawPauseDim();
@@ -537,14 +620,81 @@ public class GameScreen extends AbstractScreen {
     }
 
     private void resumeGameplay() {
+        hideSaveOverlay();
         pauseMenu.closeAll();
         flow.resumeFromPause();
         syncUiInteractionLock();
     }
 
+    private void openSaveOverlay() {
+        if (saveSlotsOverlay == null) {
+            return;
+        }
+        pauseMenu.closeAll();
+        saveSlotsOverlay.refresh();
+        saveSlotsOverlay.setStatusMessage("");
+        saveSlotsOverlay.setVisible(true);
+        saveSlotsOverlay.toFront();
+        // Remain in PAUSED — saving must not unpause unexpectedly
+        if (!flow.isOverlayPause()) {
+            flow.openPause();
+        }
+    }
+
+    private void hideSaveOverlay() {
+        if (saveSlotsOverlay != null) {
+            saveSlotsOverlay.setVisible(false);
+        }
+    }
+
+    private void performSave(int slotIndex) {
+        try {
+            if (player != null && player.isDead()) {
+                saveSlotsOverlay.setStatusMessage("Nao e possivel salvar enquanto morto.");
+                return;
+            }
+            List<Entity> overworldEntities = collectOverworldEntitiesForSave();
+            SaveData data = SaveStateMapper.capture(
+                player,
+                overworldEntities,
+                inTavern,
+                outdoorReturnX,
+                outdoorReturnY,
+                craftingController
+            );
+            boolean ok = saveService.writeSlot(slotIndex, data);
+            if (ok) {
+                session = session.withActiveSlot(slotIndex);
+                saveSlotsOverlay.setStatusMessage("Jogo salvo no Slot " + slotIndex + ".");
+                showStatusToast("Jogo salvo!");
+            } else {
+                saveSlotsOverlay.setStatusMessage("Falha ao salvar. Tente outro slot.");
+            }
+        } catch (Exception e) {
+            Gdx.app.error("GameScreen", "Save failed: " + e.getMessage());
+            if (saveSlotsOverlay != null) {
+                saveSlotsOverlay.setStatusMessage("Falha ao salvar.");
+            }
+        }
+    }
+
+    private List<Entity> collectOverworldEntitiesForSave() {
+        if (inTavern && suspendedOverworld != null) {
+            return new ArrayList<>(suspendedOverworld.entities);
+        }
+        List<Entity> list = new ArrayList<>();
+        for (Entity e : entities) {
+            if (e != player) {
+                list.add(e);
+            }
+        }
+        return list;
+    }
+
     private void restartGameplay() {
         MusicSettings.unbind(gameplayMusic);
-        game.setScreen(new GameScreen(game));
+        // Fresh session for this character/slot binding — does NOT delete save files
+        game.setScreen(new GameScreen(game, session.forRestart()));
     }
 
     private void openPauseMenu() {
@@ -612,6 +762,11 @@ public class GameScreen extends AbstractScreen {
                 return;
             }
             if (flow.getState() == GameFlowState.PAUSED) {
+                if (saveSlotsOverlay != null && saveSlotsOverlay.isVisible()) {
+                    hideSaveOverlay();
+                    pauseMenu.openPause();
+                    return;
+                }
                 resumeGameplay();
                 return;
             }
@@ -908,6 +1063,7 @@ public class GameScreen extends AbstractScreen {
         }
         if (damageFont != null) damageFont.dispose();
         if (uiFont != null) uiFont.dispose();
+        if (nameFont != null) nameFont.dispose();
         if (proceduralMap) {
             DungeonMapAdapter.disposeProceduralResources(map);
         } else if (inTavern && map != null) {

@@ -8,19 +8,26 @@ import com.donos.zebra.config.GameConfig;
 import com.donos.zebra.entities.MentorAnimationLoader;
 import com.donos.zebra.entities.OrcAnimationLoader;
 import com.donos.zebra.entities.PlayerAnimationLoader;
+import com.donos.zebra.save.GameSession;
 import com.donos.zebra.world.LevelConstants;
 import com.donos.zebra.world.LevelLoader;
 
 public class LoadingScreen extends AbstractScreen {
 
     private final MainGame game;
+    private final GameSession session;
     private boolean assetsQueued = false;
     private boolean transitionStarted = false;
     private BitmapFont font;
 
     public LoadingScreen(MainGame game) {
+        this(game, GameSession.newGame("Hero"));
+    }
+
+    public LoadingScreen(MainGame game, GameSession session) {
         super(game.batch);
         this.game = game;
+        this.session = session != null ? session : GameSession.newGame("Hero");
         this.font = new BitmapFont();
     }
 
@@ -83,7 +90,7 @@ public class LoadingScreen extends AbstractScreen {
 
         if (!transitionStarted) {
             transitionStarted = true;
-            game.setScreen(new GameScreen(game));
+            game.setScreen(new GameScreen(game, session));
         }
     }
 

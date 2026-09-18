@@ -59,6 +59,7 @@ public class Player implements Entity {
     // --- SISTEMA DE ITENS ---
     private final Inventory inventory = new Inventory(20); // Fonte única de verdade (20 slots)
     private final Wallet wallet = new Wallet();
+    private String characterName = "";
     private boolean isInteracting = false;
     private boolean hasFirstSword = false;
     private ItemDefinition equippedWeapon = null;
@@ -319,8 +320,26 @@ public class Player implements Entity {
         return currentHealth;
     }
 
+    /** Absolute HP restore for save/load (clamped to max; 0 marks dead). */
+    public void setCurrentHealth(float health) {
+        float max = getMaxHealth();
+        this.currentHealth = Math.max(0f, Math.min(max, health));
+        this.isDead = this.currentHealth <= 0f;
+        if (!this.isDead) {
+            this.hurtTimer = 0f;
+        }
+    }
+
     public float getMaxHealth(){
         return 100f;
+    }
+
+    public String getCharacterName() {
+        return characterName != null ? characterName : "";
+    }
+
+    public void setCharacterName(String characterName) {
+        this.characterName = characterName != null ? characterName : "";
     }
 
     /**
@@ -332,6 +351,37 @@ public class Player implements Entity {
 
     public Wallet getWallet() {
         return wallet;
+    }
+
+    public void setPotionCooldownRemaining(float seconds) {
+        this.potionCooldownRemaining = Math.max(0f, seconds);
+    }
+
+    public void setHasFirstSword(boolean hasFirstSword) {
+        this.hasFirstSword = hasFirstSword;
+    }
+
+    /** Direct equipment restore from save (does not touch inventory). */
+    public void restoreEquipment(
+        ItemDefinition weapon,
+        ItemDefinition helmet,
+        ItemDefinition chestplate,
+        ItemDefinition gloves,
+        ItemDefinition boots
+    ) {
+        this.equippedWeapon = weapon;
+        this.equippedHelmet = helmet;
+        this.equippedChestplate = chestplate;
+        this.equippedGloves = gloves;
+        this.equippedBoots = boots;
+    }
+
+    public void restorePotionSlot(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            this.potionSlot = null;
+            return;
+        }
+        this.potionSlot = stack;
     }
 
     /**

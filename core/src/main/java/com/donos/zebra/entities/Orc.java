@@ -170,6 +170,52 @@ public class Orc extends Enemy {
         silverLoot = OrcLootRolls.fillDefaultOrcLoot(lootTable, lootRandom);
     }
 
+    /**
+     * Restores combat/loot/respawn logical state from save (timers as elapsed seconds).
+     */
+    public void restorePersistedState(
+        float x,
+        float y,
+        float currentHealth,
+        boolean dead,
+        float deathTimer,
+        boolean looted,
+        int silverLoot,
+        java.util.List<com.donos.zebra.items.ItemStack> lootStacks
+    ) {
+        this.x = x;
+        this.y = y;
+        this.currentHealth = Math.max(0f, Math.min(maxHealth, currentHealth));
+        this.isDead = dead;
+        this.deathTimer = Math.max(0f, deathTimer);
+        this.isLooted = looted;
+        this.silverLoot = Math.max(0, silverLoot);
+        this.lootTable.clear();
+        if (lootStacks != null) {
+            for (com.donos.zebra.items.ItemStack stack : lootStacks) {
+                if (stack != null && !stack.isEmpty()) {
+                    this.lootTable.add(stack);
+                }
+            }
+        }
+        if (hitbox != null) {
+            hitbox.setPosition(this.x, this.y);
+        }
+        stateTime = 0f;
+        hurtTimer = 0f;
+        attackVisualTimer = 0f;
+        attackCooldownTimer = 0f;
+        highlightPulseTime = 0f;
+        setInteractionHighlighted(false);
+        if (isDead) {
+            if (animations != null && animations.containsKey("death")) {
+                currentAnimation = animations.get("death");
+            }
+        } else if (animations != null && animations.containsKey(AnimationConstants.ANIM_IDLE)) {
+            currentAnimation = animations.get(AnimationConstants.ANIM_IDLE);
+        }
+    }
+
     @Override
     public void takeDamage(float amount) {
         boolean wasAlive = !isDead;

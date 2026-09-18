@@ -37,6 +37,11 @@ public final class Wallet {
         totalSilver += amount;
     }
 
+    /** Absolute restore for save/load (clamped to &gt;= 0). */
+    public void setTotalSilver(int totalSilver) {
+        this.totalSilver = Math.max(0, totalSilver);
+    }
+
     public boolean canAfford(int silverCost) {
         return silverCost >= 0 && totalSilver >= silverCost;
     }

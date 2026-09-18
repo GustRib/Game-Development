@@ -41,6 +41,10 @@ public class MentorNpc implements Entity, Interactable {
         return gavePickaxe;
     }
 
+    public void setGavePickaxe(boolean gavePickaxe) {
+        this.gavePickaxe = gavePickaxe;
+    }
+
     @Override
     public void update(float delta) {
         stateTime += delta;

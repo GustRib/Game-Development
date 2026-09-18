@@ -1,0 +1,171 @@
+{
+"version": 1,
+"savedAtEpochMs": 1789744790853,
+"slotIndex": 2,
+"player": {
+	"characterName": "mateuzinn",
+	"x": 244.18918,
+	"y": 651.3319,
+	"currentHealth": 85,
+	"maxHealth": 100,
+	"hasFirstSword": false,
+	"totalSilver": 0,
+	"inventorySlots": [
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null,
+		null
+	],
+	"equippedWeaponId": null,
+	"equippedHelmetId": null,
+	"equippedChestplateId": null,
+	"equippedGlovesId": null,
+	"equippedBootsId": null,
+	"potionSlot": null,
+	"potionCooldownRemaining": 0,
+	"inTavern": false,
+	"outdoorReturnX": 124,
+	"outdoorReturnY": 720
+},
+"world": {
+	"worldId": "overworld",
+	"oreNodes": [
+		{
+			"x": 176,
+			"y": 544,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		},
+		{
+			"x": 224,
+			"y": 536,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		},
+		{
+			"x": 208,
+			"y": 520,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		},
+		{
+			"x": 192,
+			"y": 496,
+			"hitsRemaining": 3,
+			"depletedTimer": 0
+		}
+	],
+	"orcs": [
+		{
+			"spawnX": 115.3333,
+			"spawnY": 790,
+			"x": 160.4652,
+			"y": 674.3899,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 6,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 1
+				}
+			]
+		},
+		{
+			"spawnX": 175.3333,
+			"spawnY": 690,
+			"x": 197.17017,
+			"y": 656.8039,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 7,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 2
+				}
+			]
+		},
+		{
+			"spawnX": 700,
+			"spawnY": 200,
+			"x": 700,
+			"y": 200,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 6,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 2
+				}
+			]
+		},
+		{
+			"spawnX": 650,
+			"spawnY": 150,
+			"x": 650,
+			"y": 150,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 7,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 1
+				}
+			]
+		},
+		{
+			"spawnX": 620,
+			"spawnY": 80,
+			"x": 620,
+			"y": 80,
+			"currentHealth": 40,
+			"maxHealth": 40,
+			"dead": false,
+			"deathTimer": 0,
+			"looted": false,
+			"silverLoot": 6,
+			"loot": [
+				{
+					"itemId": "iron_ore",
+					"quantity": 1
+				}
+			]
+		}
+	]
+},
+"quest": {
+	"mentorGavePickaxe": false
+},
+"crafting": null
+}

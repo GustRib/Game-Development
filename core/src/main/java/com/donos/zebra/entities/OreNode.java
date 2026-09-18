@@ -128,6 +128,16 @@ public class OreNode implements Entity, Interactable {
         pulseTime = 0f;
     }
 
+    /** Restores depletion/respawn timers from save data. */
+    public void restoreState(int hitsRemaining, float depletedTimer) {
+        this.hitsRemaining = Math.max(0, hitsRemaining);
+        if (this.hitsRemaining > OpeningQuest.ORE_NODE_HITS) {
+            this.hitsRemaining = OpeningQuest.ORE_NODE_HITS;
+        }
+        this.depletedTimer = Math.max(0f, depletedTimer);
+        this.pulseTime = 0f;
+    }
+
     @Override
     public void render(SpriteBatch batch) {
         if (texture == null) {
