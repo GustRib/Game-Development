@@ -14,6 +14,9 @@ import io.github.fourlastor.construo.Target
 
 plugins {
   id "application"
+  // GradleUp fork of Shadow; 9.2.2 is last line compatible with Gradle 8.14
+  // (9.3+ requires Gradle 9.0+).
+  id "com.gradleup.shadow" version "9.2.2"
 }
 apply plugin: 'io.github.fourlastor.construo'
 
@@ -70,6 +73,96 @@ jar {
   doLast {
     file(archiveFile).setExecutable(true, false)
   }
+}
+
+shadowJar {
+  archiveClassifier.set('all')
+  archiveFileName.set("${appName}-${projectVersion}-all.jar")
+  duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+  mergeServiceFiles()
+  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
+  manifest {
+    attributes 'Main-Class': project.mainClassName
+  }
+}
+
+/**
+ * Windows app-image via jpackage (bundled JRE folder + .exe, no installer).
+ * Output: {@code lwjgl3/build/jpackage/RidersOfHive/}
+ *
+ * Requires {@code jpackage} on PATH (JDK 14+). Uses --win-console for alpha diagnostics.
+ * No .ico is present in-repo yet (construo references icons/logo.png which is missing),
+ * so jpackage uses the default icon.
+ */
+tasks.register('jpackageAppImage', Exec) {
+  group = 'distribution'
+  description = 'Build a Windows app-image (exe + bundled runtime) with jpackage'
+  dependsOn shadowJar
+
+  def imageName = 'RidersOfHive'
+  def outDir = layout.buildDirectory.dir('jpackage')
+  def jarFile = shadowJar.archiveFile
+  def inputDir = layout.buildDirectory.dir('jpackage-input')
+
+  outputs.dir(outDir)
+
+  def resolveJpackage = {
+    def fromEnv = System.getenv('JAVA_HOME')
+    if (fromEnv) {
+      def candidate = new File(fromEnv, 'bin/jpackage.exe')
+      if (candidate.exists()) return candidate.absolutePath
+      candidate = new File(fromEnv, 'bin/jpackage')
+      if (candidate.exists()) return candidate.absolutePath
+    }
+    def javaHomeProp = System.getProperty('java.home')
+    if (javaHomeProp) {
+      def candidate = new File(javaHomeProp, 'bin/jpackage.exe')
+      if (candidate.exists()) return candidate.absolutePath
+      // java.home may point at a JRE nested under a JDK
+      candidate = new File(javaHomeProp, '../bin/jpackage.exe')
+      if (candidate.exists()) return candidate.canonicalPath
+    }
+    def fallback = new File('C:/Program Files/Java/jdk-21/bin/jpackage.exe')
+    if (fallback.exists()) return fallback.absolutePath
+    return 'jpackage'
+  }
+
+  doFirst {
+    def input = inputDir.get().asFile
+    input.mkdirs()
+    def destJar = new File(input, jarFile.get().asFile.name)
+    java.nio.file.Files.copy(
+      jarFile.get().asFile.toPath(),
+      destJar.toPath(),
+      java.nio.file.StandardCopyOption.REPLACE_EXISTING
+    )
+    def imageOut = outDir.get().asFile
+    imageOut.mkdirs()
+    def existing = new File(imageOut, imageName)
+    if (existing.exists()) {
+      delete existing
+    }
+    executable = resolveJpackage()
+    println "Using jpackage: ${executable}"
+  }
+
+  workingDir = project.projectDir
+  executable = resolveJpackage()
+  args = [
+    '--type', 'app-image',
+    '--input', inputDir.get().asFile.absolutePath,
+    '--dest', outDir.get().asFile.absolutePath,
+    '--name', imageName,
+    '--main-jar', jarFile.get().asFile.name,
+    '--main-class', project.mainClassName,
+    '--app-version', '0.1',
+    '--win-console'
+  ]
+}
+
+// Equivalent to the jar task; here for compatibility with gdx-setup.
+tasks.register('dist') {
+  dependsOn 'shadowJar'
 }
 
 // Builds a JAR that only includes the files needed to run on macOS, not Windows or Linux.
@@ -153,11 +246,6 @@ construo {
         //useConsole.set(true)
       }
     }
-}
-
-// Equivalent to the jar task; here for compatibility with gdx-setup.
-tasks.register('dist') {
-  dependsOn 'jar'
 }
 
 distributions {

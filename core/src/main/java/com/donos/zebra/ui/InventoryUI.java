@@ -21,7 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.donos.zebra.entities.Player;
-import com.donos.zebra.items.Inventory;
+import com.donos.zebra.items.Inventory; 
 import com.donos.zebra.items.ItemDefinition;
 import com.donos.zebra.items.ItemStack;
 import com.donos.zebra.items.PotionRules;
@@ -58,7 +58,7 @@ public class InventoryUI extends GameWindow {
         this.assetManager = assetManager;
         this.player = player;
         this.dragAndDrop = new DragAndDrop();
-
+        
         setResizable(true);
 
         currencyReadout = new CurrencyReadout(skin, assetManager);
@@ -134,13 +134,13 @@ public class InventoryUI extends GameWindow {
             currencyReadout.refresh(player.getWallet());
         }
         for (InventorySlotActor slotActor : slots) {
-            int index = slotActor.getSlotIndex();
+                int index = slotActor.getSlotIndex();
             ItemStack stack = backendInventory.getStackAt(index);
-            if (stack != null) {
-                slotActor.setItem(stack.getDefinition());
+                if (stack != null) {
+                    slotActor.setItem(stack.getDefinition());
                 slotActor.setQuantity(stack.getQuantity());
-            } else {
-                slotActor.setItem(null);
+                } else {
+                    slotActor.setItem(null);
                 slotActor.setQuantity(0);
             }
         }
@@ -238,10 +238,10 @@ public class InventoryUI extends GameWindow {
             @Override
             public Payload dragStart(InputEvent event, float x, float y, int pointer) {
                 InventorySlotActor actor = (InventorySlotActor) getActor();
-                if (actor.isEmpty()) return null;
+                if (actor.isEmpty()) return null; 
 
                 Payload payload = new Payload();
-                payload.setObject(actor);
+                payload.setObject(actor); 
 
                 InventorySlotActor dragActor = new InventorySlotActor(actor.getSlotIndex(), skin, assetManager);
                 dragActor.setItem(actor.getItem());
@@ -255,7 +255,7 @@ public class InventoryUI extends GameWindow {
         dragAndDrop.addTarget(new Target(slot) {
             @Override
             public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
-                return true;
+                return true; 
             }
 
             @Override
@@ -272,8 +272,8 @@ public class InventoryUI extends GameWindow {
     public static Skin createDefaultSkin(BitmapFont font) {
         Skin skin = new Skin();
         skin.add("default", font);
-
-        com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle labelStyle =
+        
+        com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle labelStyle = 
             new com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle();
         labelStyle.font = font;
         labelStyle.fontColor = Color.WHITE;
